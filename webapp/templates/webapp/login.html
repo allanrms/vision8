@@ -177,7 +177,8 @@
             border-radius: 16px;
             padding: 1.2rem 1rem 0.8rem;
             font-size: 1rem;
-            color: #e5e7eb;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
             transition: all 0.3s ease;
         }
 
@@ -186,6 +187,16 @@
             border-color: white;
             box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
             outline: none;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+
+        .form-floating input:-webkit-autofill,
+        .form-floating input:-webkit-autofill:hover,
+        .form-floating input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #ffffff !important;
+            -webkit-box-shadow: 0 0 0px 1000px var(--black-surface) inset !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
 
         .form-floating label {

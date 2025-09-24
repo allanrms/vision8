@@ -35,6 +35,7 @@ SITE_URL = env('BACKEND_BASE_URL')
 # EVOLUTION_API_INSTANCE = env('EVOLUTION_API_INSTANCE')
 
 N8N_WEBHOOK_URL = env('N8N_WEBHOOK_URL')
+DASHBOARD_URL = env('DASHBOARD_URL')
 
 # Google Calendar OAuth2 settings
 GOOGLE_OAUTH2_CLIENT_ID = env('GOOGLE_OAUTH2_CLIENT_ID')
@@ -213,4 +214,10 @@ ALLOWED_PHONE_NUMBERS = os.environ.get('ALLOWED_PHONE_NUMBERS', '').split(',')
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+# Django AI Assistant settings
+DJANGO_AI_ASSISTANT = {
+    'save_messages': False,  # Não salvar mensagens automaticamente
+    'save_threads': False,   # Não salvar threads automaticamente
+}
 

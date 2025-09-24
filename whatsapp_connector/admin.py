@@ -75,15 +75,16 @@ class ChatSessionAdmin(admin.ModelAdmin):
     """
     Admin para gerenciar sessões de chat
     """
-    list_display = ('id', 'from_number', 'to_number', 'status', 'message_count', 'created_at', 'updated_at')
-    list_filter = ('status', 'created_at', 'updated_at')
-    search_fields = ('from_number', 'to_number')
+    list_display = ('id', 'from_number', 'to_number', 'owner', 'status', 'message_count', 'created_at', 'updated_at')
+    list_filter = ('status', 'owner', 'evolution_instance', 'created_at', 'updated_at')
+    search_fields = ('from_number', 'to_number', 'owner__username', 'owner__first_name', 'owner__email')
     readonly_fields = ('created_at', 'updated_at', 'message_count')
     list_editable = ('status', )
-    
+    autocomplete_fields = ['owner']
+
     fieldsets = (
         ('Session Info', {
-            'fields': ('from_number', 'to_number', 'status')
+            'fields': ('from_number', 'to_number', 'owner', 'status', 'evolution_instance')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
@@ -93,6 +94,18 @@ class ChatSessionAdmin(admin.ModelAdmin):
         }),
     )
     
+    def get_owner(self, obj):
+        """Retorna o usuário dono da sessão"""
+        if obj.owner:
+            return format_html(
+                '<span title="{}">{}</span>',
+                obj.owner.email,
+                obj.owner.username
+            )
+        return '-'
+    get_owner.short_description = 'Usuário'
+    get_owner.admin_order_field = 'owner__username'
+
     def status_badge(self, obj):
         """Exibe status com badge colorido"""
         colors = {
@@ -107,7 +120,7 @@ class ChatSessionAdmin(admin.ModelAdmin):
             obj.get_status_display()
         )
     status_badge.short_description = 'Status'
-    
+
     def message_count(self, obj):
         """Retorna o número de mensagens na sessão"""
         return obj.messages.count()
@@ -116,14 +129,14 @@ class ChatSessionAdmin(admin.ModelAdmin):
 
 @admin.register(MessageHistory)
 class MessageHistoryAdmin(admin.ModelAdmin):
-    list_display = ('chat_session_id', 'get_from_number', 'sender_name', 'message_type', 'content', 'processing_status', 'inactive_badge', 'created_at', 'received_at')
-    list_filter = ('message_type', 'processing_status', 'received_while_inactive', 'received_at', 'created_at')
-    search_fields = ('message_id', 'chat_session__from_number', 'content', 'sender_name')
+    list_display = ('chat_session_id', 'get_from_number', 'get_owner', 'sender_name', 'message_type', 'content_preview', 'processing_status', 'inactive_badge', 'created_at', 'received_at')
+    list_filter = ('message_type', 'processing_status', 'received_while_inactive', 'owner', 'received_at', 'created_at')
+    search_fields = ('message_id', 'chat_session__from_number', 'content', 'sender_name', 'owner__username', 'owner__first_name')
     readonly_fields = ('message_id', 'created_at', 'received_at', 'updated_at')
-    
+
     fieldsets = (
         ('Message Info', {
-            'fields': ('message_id', 'chat_session', 'message_type', 'created_at', 'received_at', 'updated_at')
+            'fields': ('message_id', 'chat_session', 'owner', 'message_type', 'created_at', 'received_at', 'updated_at')
         }),
         ('Content', {
             'fields': ('content', 'media_url', 'media_file')
@@ -145,7 +158,29 @@ class MessageHistoryAdmin(admin.ModelAdmin):
         return obj.chat_session.from_number if obj.chat_session else '-'
     get_from_number.short_description = 'From Number'
     get_from_number.admin_order_field = 'chat_session__from_number'
-    
+
+    def get_owner(self, obj):
+        """Retorna o usuário dono da mensagem"""
+        if obj.owner:
+            return format_html(
+                '<span title="{}">{}</span>',
+                obj.owner.email,
+                obj.owner.username
+            )
+        return '-'
+    get_owner.short_description = 'Usuário'
+    get_owner.admin_order_field = 'owner__username'
+
+    def content_preview(self, obj):
+        """Exibe preview do conteúdo (limitado a 50 caracteres)"""
+        if obj.content:
+            content = obj.content[:50]
+            if len(obj.content) > 50:
+                content += '...'
+            return content
+        return '-'
+    content_preview.short_description = 'Conteúdo'
+
     def inactive_badge(self, obj):
         """Exibe badge se mensagem foi recebida com instância inativa"""
         if obj.received_while_inactive:

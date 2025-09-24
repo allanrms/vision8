@@ -285,35 +285,35 @@ class AgentLLMService:
                 response=None
             )
 
-            # Usar django-ai-assistant LLM para processar
-            llm = self.assistant.get_llm()
+            # Adicionar mensagem atual ao histórico de mensagens
+            messages.append(HumanMessage(content=message_content))
 
-            # Enviar para o LLM
-            response = llm.invoke(messages)
-            ai_response = response.content
+            # Usar django-ai-assistant com suporte a tools
+            # O .invoke() do grafo executa com tool calling e histórico manual
+            # thread_id=None evita salvar thread no banco
+            graph = self.assistant.as_graph(thread_id=None)
 
-            print(f"Resposta do django-ai-assistant: {ai_response}")
+            # Configurar limite de recursão e desabilitar salvamento
+            config = {
+                "recursion_limit": 50,
+                "configurable": {
+                    "thread_id": None,  # Não salvar thread
+                }
+            }
 
-            # Processar resposta estruturada
-            if ai_response:
-                # Tentar processar resposta estruturada
-                processed_response = self._process_structured_response(ai_response)
+            result = graph.invoke({"messages": messages, "input": None}, config=config)
+            ai_response = result.get("output", "")
 
-                if processed_response:
-                    # Resposta estruturada processada com sucesso
-                    response_msg = processed_response
-                else:
-                    # Resposta simples
-                    response_msg = ai_response
-            else:
-                response_msg = 'Desculpe, ocorreu um erro ao processar sua mensagem.'
-                print(f"Erro no LLM: {ai_response}")
+            # Debug: verificar se há tool calls na resposta
+            if result.get("messages"):
+                last_msg = result["messages"][-1]
+
 
             # Salvar resposta no histórico
-            history.message['response'] = response_msg if isinstance(response_msg, str) else ai_response
+            history.message['response'] = ai_response
             history.save()
 
-            return response_msg
+            return ai_response
 
         except Exception as e:
             print(f"Erro ao comunicar via django-ai-assistant: {e}")

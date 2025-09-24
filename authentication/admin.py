@@ -21,3 +21,4 @@ class CustomUserAdmin(UserAdmin):
 
     list_display = UserAdmin.list_display + ('preferred_language', 'role')
     list_filter = UserAdmin.list_filter + ('preferred_language', 'role')
+    search_fields = ('username', 'first_name', 'last_name', 'email')

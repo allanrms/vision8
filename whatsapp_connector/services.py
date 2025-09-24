@@ -38,30 +38,37 @@ class EvolutionAPIService:
         
         payload = {
             "number": clean_number,
-            "textMessage": {"text": message}
+            "options": {
+                "delay": 1200,
+                "presence": "composing",
+                "linkPreview": False
+            },
+            "textMessage": {
+                "text": message
+            }
         }
         
         print(f"📤 Enviando mensagem via Evolution API:")
         print(f"   URL: {url}")
         print(f"   Número original: {to_number}")
         print(f"   Número limpo: {clean_number}")
-        print(f"   Mensagem: {message}")
-        print(f"   Payload: {payload}")
+        # print(f"   Mensagem: {message}")
+        # print(f"   Payload: {payload}")
         
         try:
             response = requests.post(url, json=payload, headers=headers)
             print(f"   Status: {response.status_code}")
             if response.status_code != 200:
-                print(f"   Response body: {response.text}")
+                print(f"   Response body1: {response.text}")
             response.raise_for_status()
-            print(f"✅ Mensagem enviada com sucesso: {response.text}")
+            # print(f"✅ Mensagem enviada com sucesso: {response.text}")
 
             return response.json()
         except requests.RequestException as e:
             print(f"❌ Erro ao enviar mensagem: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 print(f"   Response status: {e.response.status_code}")
-                print(f"   Response body: {e.response.text}")
+                print(f"   Response body2: {e.response.text}")
             traceback.print_exc()
             return None
     
@@ -206,7 +213,7 @@ class EvolutionAPIService:
             response = requests.post(url, json=payload, headers=headers)
             print(f"   Status: {response.status_code}")
             if response.status_code != 200:
-                print(f"   Response body: {response.text}")
+                print(f"   Response body3: {response.text}")
             response.raise_for_status()
             print(f"✅ Arquivo enviado com sucesso: {response.text}")
 
@@ -216,7 +223,7 @@ class EvolutionAPIService:
             print(f"❌ Erro ao processar/enviar arquivo: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 print(f"   Response status: {e.response.status_code}")
-                print(f"   Response body: {e.response.text}")
+                print(f"   Response body4: {e.response.text}")
             traceback.print_exc()
             return None
         except FileNotFoundError:
@@ -711,7 +718,7 @@ Por favor, forneça as informações de forma clara, separadas e organizadas. Se
                         error_detail = response.json().get('error', {}).get('message', 'Erro desconhecido')
                         print(f"Detalhes do erro: {error_detail}")
                     except:
-                        print(f"Response body: {response.text}")
+                        print(f"Response body5: {response.text}")
                     continue
                     
             except requests.exceptions.Timeout:

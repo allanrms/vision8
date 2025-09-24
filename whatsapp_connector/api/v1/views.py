@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Tuple
+
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.permissions import AllowAny
@@ -8,12 +10,13 @@ from rest_framework import status
 
 from agents.models import LLMProviderConfig
 from agents.services import create_llm_service
+from authentication.models import User
 from utils.ai_assistants import IntentRouterAssistant
 from whatsapp_connector.models import MessageHistory, EvolutionInstance
 from whatsapp_connector.services import ImageProcessingService, EvolutionAPIService
 from whatsapp_connector.utils import transcribe_audio_from_bytes, clean_number_whatsapp
 
-from django_ai_assistant.models import Thread
+# from django_ai_assistant.models import Thread  # Não usar - desabilitado
 
 
 # @method_decorator(csrf_exempt, name='dispatch')
@@ -46,9 +49,9 @@ class EvolutionWebhookView(APIView):
 
             # Get Evolution instance
             evolution_instance = self._get_evolution_instance(message_data)
-            
-            # Save message to database
-            message_history = self._save_message(message_data, evolution_instance)
+
+            # Save message to database and get WhatsApp contact user
+            message_history, whatsapp_user = self._save_message(message_data, evolution_instance)
 
             # Check and process admin commands (activate/deactivate instance)
             admin_response = self._process_admin_commands(message_history, evolution_instance)
@@ -59,7 +62,7 @@ class EvolutionWebhookView(APIView):
             # calendar_response = self._process_calendar_commands(message_history, evolution_instance)
             # if calendar_response:
             #     return calendar_response
-            
+
             # Verifique se a instância está ativa - caso contrário, ignore a mensagem
             if evolution_instance and not evolution_instance.is_active:
                 print(f"🔴 Instância inativa, ignorando mensagem: {evolution_instance.name}")
@@ -73,12 +76,12 @@ class EvolutionWebhookView(APIView):
             ignore_response = self._should_ignore_own_message(message_history, evolution_instance)
             if ignore_response:
                 return ignore_response
-            
+
             # Verifique se o remetente tem permissão para usar o serviço usando a configuração da instância
             auth_response = self._validate_authorized_number(message_history, evolution_instance)
             if auth_response:
                 return auth_response
-            
+
             # Inicializar serviços
             evolution_api = EvolutionAPIService(evolution_instance)
             # n8n_service = N8NService()  # Comentado - usando OpenAI via agents
@@ -100,26 +103,18 @@ class EvolutionWebhookView(APIView):
                 message_history.processing_status = 'processing'
                 message_history.save()
 
-                # Usar configuração da instância
-                instance_owner = evolution_instance.owner if evolution_instance else None
+                # intent_router_assistant = IntentRouterAssistant()
+                #
+                # # Não usar Thread do django-ai-assistant (desabilitado)
+                # config_type = intent_router_assistant.run(
+                #     message=message_history.content,
+                #     thread_id=None  # Sem thread persistente
+                # )
 
-                intent_router_assistant = IntentRouterAssistant()
+                llm_config = LLMProviderConfig.objects.filter(config_type='finance').first()
 
-                thread, _ = Thread.objects.get_or_create(
-                    name=f"{message_history.chat_session.from_number}"
-                )
-
-                config_type = intent_router_assistant.run(
-                    message=message_history.content,
-                    thread_id=thread.id
-                )
-
-
-                llm_config = LLMProviderConfig.objects.filter(config_type=config_type).first()
-                print(f'config_type: {config_type}')
-                print(f'llm_config: {llm_config}')
                 if llm_config:
-                    ai = create_llm_service(llm_config, user=instance_owner)
+                    ai = create_llm_service(llm_config, user=whatsapp_user)
                     response_msg = ai.send_text_message(message_history.content, message_history.chat_session)
                 else:
                     # Fallback: usar configuração padrão ou mostrar erro
@@ -128,6 +123,7 @@ class EvolutionWebhookView(APIView):
             # Processar resposta estruturada ou simples - só se houver resposta
             result = False
             if response_msg:
+
                 result = self._send_response_to_whatsapp(evolution_api, message_history.chat_session.from_number, response_msg)
 
                 # Atualizar o MessageHistory com a resposta
@@ -316,25 +312,50 @@ class EvolutionWebhookView(APIView):
         
         return None
     
-    def _save_message(self, message_data, evolution_instance=None) -> MessageHistory:
+    def _save_message(self, message_data, evolution_instance=None) -> tuple[MessageHistory, User]:
         """Save message to database"""
         from whatsapp_connector.models import ChatSession
-        
+        from django.conf import settings
+
         # Get or create chat session first
         from_number = clean_number_whatsapp(message_data['from_number'])
         to_number = clean_number_whatsapp(message_data.get('to_number', ''))
 
         print(f'from_number {from_number} to_number {to_number}')
 
+        user_whatsapp_contact, user_created, password = self._get_or_create_user(from_number, message_data.get('sender_name', ''))
+
         # Buscar sessão ativa (ai ou human) ou criar nova com status 'ai'
         chat_session, session_created = ChatSession.get_or_create_active_session(
             from_number=from_number,
             to_number=to_number,
-            evolution_instance=evolution_instance
+            evolution_instance=evolution_instance,
+            owner=user_whatsapp_contact
         )
+
 
         if session_created:
             print(f"✅ Nova sessão criada para {from_number} com status 'ai'")
+
+            # Se o usuário foi criado agora, enviar mensagem de boas-vindas
+            if user_created and password and evolution_instance:
+                evolution_api = EvolutionAPIService(evolution_instance)
+                dashboard_url = getattr(settings, 'DASHBOARD_URL', 'https://seu-dashboard.com')
+
+                welcome_msg = f"""🎉 *Bem-vindo ao nosso sistema de gestão financeira!*
+
+Sua conta foi criada com sucesso! Aqui estão suas credenciais de acesso:
+
+👤 *Login:* {user_whatsapp_contact.username}
+🔐 *Senha:* {password}
+🌐 *Acesse:* {dashboard_url}
+
+📊 Seu perfil já está configurado com mais de 60 categorias financeiras prontas para uso!
+
+💡 *Dica:* Guarde suas credenciais em um local seguro. Você pode usar o sistema via WhatsApp ou acessar o dashboard pelo link acima."""
+
+                evolution_api.send_text_message(from_number, welcome_msg)
+                print(f"📨 Mensagem de boas-vindas enviada para {from_number}")
         else:
             print(f"ℹ️ Usando sessão existente para {from_number} (status: {chat_session.get_status_display()})")
 
@@ -354,11 +375,8 @@ class EvolutionWebhookView(APIView):
         
         # Add chat_session
         save_data['chat_session'] = chat_session
-        
-        # Add owner from evolution_instance
-        if evolution_instance and hasattr(evolution_instance, 'owner'):
-            save_data['owner'] = evolution_instance.owner
-        
+        save_data['owner'] = user_whatsapp_contact
+
         # Set created_at from timestamp if available
         if 'timestamp' in save_data:
             save_data['created_at'] = save_data.pop('timestamp')
@@ -367,7 +385,7 @@ class EvolutionWebhookView(APIView):
             message_id=message_data['message_id'],
             defaults=save_data
         )
-        return message_history
+        return message_history, user_whatsapp_contact
     
     def _process_audio_message(self, message, evolution_api, raw_data) -> str:
         """Process audio message like orbi app"""
@@ -483,6 +501,49 @@ class EvolutionWebhookView(APIView):
         finally:
             return message
     
+    def _get_or_create_user(self, phone_number, sender_name=''):
+        """
+        Busca ou cria um usuário baseado no número de telefone
+        Retorna tupla: (usuário, foi_criado, senha_ou_none)
+        """
+        from django.contrib.auth import get_user_model
+        from finance.utils import create_default_categories
+        import secrets
+        import string
+
+        User = get_user_model()
+
+        username = phone_number
+        email = f"{phone_number}@gmail.com"
+
+        user, user_created = User.objects.get_or_create(
+            username=username,
+            defaults={
+                'email': email,
+                'first_name': sender_name,
+            }
+        )
+
+        password = None
+
+        if user_created:
+            # Gerar senha aleatória única (12 caracteres)
+            alphabet = string.ascii_letters + string.digits + string.punctuation
+            password = ''.join(secrets.choice(alphabet) for _ in range(12))
+            user.set_password(password)
+            user.save()
+
+            # Criar categorias padrão para o novo usuário
+            categories_count = create_default_categories(user)
+
+            print(f"✅ Usuário criado automaticamente: {username} ({email})")
+            print(f"🔐 Senha gerada: {password}")
+            print(f"📂 {categories_count} categorias padrão criadas")
+        else:
+            print(f"ℹ️ Usuário já existe: {username}")
+
+        return user, user_created, password
+
     def _get_evolution_instance(self, message_data):
         """
         Busca a instância Evolution baseada no owner da mensagem
@@ -498,7 +559,7 @@ class EvolutionWebhookView(APIView):
                 print(f"❌ Instância não encontrada para owner: {owner}")
         else:
             print("⚠️ Owner não encontrado na mensagem")
-            
+
         return evolution_instance
     
     def _process_admin_commands(self, message_history, evolution_instance):
@@ -791,12 +852,12 @@ class EvolutionWebhookView(APIView):
         """
         Envia resposta para WhatsApp, detectando se é estruturada ou simples
         """
-        if isinstance(response_msg, dict) and response_msg.get("type") == "structured":
-            # Resposta estruturada - enviar texto e arquivo separadamente
-            return self._send_structured_response(evolution_api, to_number, response_msg)
-        else:
-            # Resposta simples - enviar apenas texto
-            return evolution_api.send_text_message(to_number, str(response_msg))
+        # if isinstance(response_msg, dict) and response_msg.get("type") == "structured":
+        #     # Resposta estruturada - enviar texto e arquivo separadamente
+        #     return self._send_structured_response(evolution_api, to_number, response_msg)
+        # else:
+        #     # Resposta simples - enviar apenas texto
+        return evolution_api.send_text_message(to_number, str(response_msg))
     
     def _send_structured_response(self, evolution_api, to_number, structured_response):
         """

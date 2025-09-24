@@ -173,6 +173,8 @@ class ChatSession(models.Model):
         ("closed", "Encerrada"),
     )
 
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     evolution_instance = models.ForeignKey(
         'EvolutionInstance',
         on_delete=models.CASCADE,
@@ -198,7 +200,7 @@ class ChatSession(models.Model):
         ordering = ["-id"]
 
     @classmethod
-    def get_or_create_active_session(cls, from_number, to_number, evolution_instance=None):
+    def get_or_create_active_session(cls, from_number, to_number, evolution_instance=None, owner=None):
         """
         Busca uma sessão ativa (ai ou human) ou cria uma nova
 
@@ -206,6 +208,7 @@ class ChatSession(models.Model):
             from_number: Número de origem
             to_number: Número de destino
             evolution_instance: Instância Evolution (opcional)
+            owner: Usuário dono da sessão (opcional)
 
         Returns:
             tuple: (ChatSession, created)
@@ -221,6 +224,10 @@ class ChatSession(models.Model):
             if evolution_instance and not active_session.evolution_instance:
                 active_session.evolution_instance = evolution_instance
                 active_session.save(update_fields=['evolution_instance'])
+            # Atualizar owner se necessário
+            if owner and not active_session.owner:
+                active_session.owner = owner
+                active_session.save(update_fields=['owner'])
             return active_session, False
 
         # Criar nova sessão se não encontrar ativa
@@ -230,7 +237,8 @@ class ChatSession(models.Model):
             from_number=from_number,
             to_number=to_number,
             status='ai',  # Default para AI
-            evolution_instance=evolution_instance
+            evolution_instance=evolution_instance,
+            owner=owner
         )
 
         return new_session, True

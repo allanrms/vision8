@@ -8,11 +8,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from .models import Category, Movement
 
-
-class FinanceAIAssistant(AIAssistant):
-    id = "finance_assistant"
-    name = "Assistente de Finanças"
-    instructions = """Você é um assistente inteligente especializado em gestão financeira.
+"""Você é um assistente inteligente especializado em gestão financeira.
 
     Você pode ajudar os usuários a:
     - Registrar receitas e despesas
@@ -24,12 +20,17 @@ class FinanceAIAssistant(AIAssistant):
     Sempre seja útil, preciso e forneça informações claras sobre as finanças.
     Use as ferramentas disponíveis para registrar e consultar movimentações financeiras.
 
-    Quando listar movimentações, formate as informações de forma clara e legível.
-    Quando registrar movimentações, confirme os detalhes registrados.
+    IMPORTANTE: Quando usar qualquer ferramenta, retorne EXATAMENTE a resposta da ferramenta, sem adicionar, modificar ou reformular.
+    As ferramentas já retornam mensagens formatadas e completas.
 
     Para valores monetários, sempre use o formato brasileiro (R$ 100,50).
     Ao registrar uma movimentação, não é necessário pedir confirmação, apenas registre.
-    Analise e insira no categoria que faça mais sentido"""
+    Analise e insira na categoria que faça mais sentido."""
+
+class FinanceAIAssistant(AIAssistant):
+    id = "finance_assistant"
+    name = "Assistente de Finanças"
+    instructions = ""
     model = "gpt-4o-mini"
 
     def __init__(self, **kwargs):
@@ -44,16 +45,21 @@ class FinanceAIAssistant(AIAssistant):
             if self._llm_config.instructions:
                 self.instructions = self._llm_config.instructions
 
+    def get_instructions(self):
+        base_instructions = f"{self.instructions}\n\nData e hora atual: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
+
+        # Adicionar lista de categorias disponíveis do usuário
+        if self._user:
+            categories = Category.objects.filter(user=self._user, is_active=True).order_by('name')
+            if categories.exists():
+                categorias_lista = "\n".join([f"  - {cat.name}" for cat in categories])
+                base_instructions += f"\n\n**CATEGORIAS DISPONÍVEIS DO USUÁRIO:**\n{categorias_lista}\n\nIMPORTANTE: Use EXATAMENTE um desses nomes de categoria ao registrar movimentações. Escolha a categoria que melhor se encaixa na descrição da movimentação."
+
+        return base_instructions
+
     def get_llm(self):
-        """Retorna o modelo LLM configurado baseado no LLMProviderConfig"""
         if not self._llm_config:
-            # Fallback para configuração padrão
-            return ChatOpenAI(
-                model=self.model,
-                temperature=0.7,
-                max_tokens=1024,
-                openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
-            )
+            return super().get_llm()
 
         provider = self._llm_config.name
 
@@ -84,7 +90,6 @@ class FinanceAIAssistant(AIAssistant):
                 google_api_key=getattr(settings, 'GOOGLE_API_KEY', '')
             )
         else:
-            # Fallback para OpenAI se provider não reconhecido
             return ChatOpenAI(
                 model=self._llm_config.model,
                 temperature=self._llm_config.temperature,
@@ -92,17 +97,16 @@ class FinanceAIAssistant(AIAssistant):
                 openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
             )
 
-    def get_instructions(self):
-        return f"{self.instructions}\n\nData e hora atual: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
-
     @method_tool
-    def listar_movimentacoes(self, limite: int = 10, tipo: str = "", categoria: str = "") -> str:
+    def listar_movimentacoes(self, limite: int = 10, tipo: str = "", categoria: str = "", data_inicial: str = "", data_final: str = "") -> str:
         """Lista as movimentações financeiras
 
         Args:
             limite: Número máximo de movimentações para retornar (padrão: 10)
             tipo: Filtro por tipo ('income' para receitas, 'expense' para despesas, vazio para todos)
             categoria: Nome da categoria para filtrar (opcional)
+            data_inicial: Data inicial no formato DD/MM/YYYY (opcional)
+            data_final: Data final no formato DD/MM/YYYY (opcional)
 
         Returns:
             String com as movimentações formatadas ou mensagem de erro
@@ -117,6 +121,21 @@ class FinanceAIAssistant(AIAssistant):
 
             if categoria:
                 queryset = queryset.filter(category__name__icontains=categoria)
+
+            # Filtrar por período (data do movimento, não data de criação)
+            if data_inicial:
+                try:
+                    data_inicio = datetime.strptime(data_inicial, '%d/%m/%Y').date()
+                    queryset = queryset.filter(date__gte=data_inicio)
+                except ValueError:
+                    return "❌ Formato de data inicial inválido. Use DD/MM/YYYY (ex: 25/12/2024)"
+
+            if data_final:
+                try:
+                    data_fim = datetime.strptime(data_final, '%d/%m/%Y').date()
+                    queryset = queryset.filter(date__lte=data_fim)
+                except ValueError:
+                    return "❌ Formato de data final inválido. Use DD/MM/YYYY (ex: 25/12/2024)"
 
             movements = queryset.order_by('-date', '-created_at')[:limite]
 
@@ -199,20 +218,17 @@ class FinanceAIAssistant(AIAssistant):
 
             user = self._user
 
-            # Buscar ou criar categoria
-            category, created = Category.objects.get_or_create(
-                user=user,
-                name__iexact=categoria,
-                defaults={'name': categoria, 'user': user}
-            )
+            category = Category.objects.filter(user=user, name__iexact=categoria, is_active=True).first()
 
-            if created:
-                categoria_msg = f" (categoria '{categoria}' criada automaticamente)"
-            else:
-                categoria_msg = ""
+            if not category:
+                available_categories = Category.objects.filter(user=user, is_active=True).values_list('name', flat=True)
+                if not available_categories:
+                    return "❌ Você ainda não possui categorias cadastradas."
 
-            # Criar movimentação
-            movement = Movement.objects.create(
+                categories_list = "\n".join([f"  - {cat}" for cat in available_categories])
+                return f"❌ Categoria '{categoria}' não encontrada. Use EXATAMENTE um dos nomes disponíveis:\n\n{categories_list}"
+
+            Movement.objects.create(
                 user=user,
                 type=tipo,
                 amount=valor_decimal,
@@ -221,7 +237,6 @@ class FinanceAIAssistant(AIAssistant):
                 category=category
             )
 
-            # Formatar resposta
             tipo_display = "Receita" if tipo == 'income' else "Despesa"
             tipo_icon = "📈" if tipo == 'income' else "📉"
             sinal = "+" if tipo == 'income' else "-"
@@ -232,7 +247,7 @@ class FinanceAIAssistant(AIAssistant):
 {tipo_icon} *Descrição:* {descricao}
 {cor} *Valor:* {sinal}R$ {valor:.2f}
 📅 *Data:* {data_obj.strftime('%d/%m/%Y')}
-🏷️ *Categoria:* {categoria}{categoria_msg}"""
+🏷️ *Categoria:* {category.name}"""
 
             return resposta
 
@@ -385,6 +400,40 @@ class FinanceAIAssistant(AIAssistant):
 
         except Exception as e:
             return f"❌ Erro interno ao criar categoria: {str(e)}"
+
+    @method_tool
+    def deletar_categoria(self, nome: str) -> str:
+        """Deleta uma categoria existente
+
+        Args:
+            nome: Nome da categoria a ser deletada
+
+        Returns:
+            String com resultado da operação
+        """
+        try:
+            user = self._user
+
+            # Buscar categoria
+            category = Category.objects.filter(user=user, name__icontains=nome).first()
+
+            if not category:
+                return f"❌ Categoria '{nome}' não encontrada."
+
+            # Verificar se há movimentações usando esta categoria
+            movements_count = Movement.objects.filter(user=user, category=category).count()
+
+            if movements_count > 0:
+                return f"❌ Não é possível deletar a categoria '{category.name}' pois ela possui {movements_count} movimentações associadas.\n\n💡 Você pode desativar a categoria ao invés de deletá-la."
+
+            # Deletar categoria
+            category_name = category.name
+            category.delete()
+
+            return f"🗑️ *Categoria deletada com sucesso!*\n\n🏷️ {category_name}"
+
+        except Exception as e:
+            return f"❌ Erro interno ao deletar categoria: {str(e)}"
 
     @method_tool
     def deletar_movimentacao(self, descricao: str = "", data: str = "", valor: float = 0) -> str:

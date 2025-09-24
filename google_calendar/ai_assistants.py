@@ -42,16 +42,12 @@ class GoogleCalendarAIAssistant(AIAssistant):
             if self._llm_config.instructions:
                 self.instructions = self._llm_config.instructions
 
+    def get_instructions(self):
+        return f"{self.instructions}\n\nData e hora atual: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
+
     def get_llm(self):
-        """Retorna o modelo LLM configurado baseado no LLMProviderConfig"""
         if not self._llm_config:
-            # Fallback para configuração padrão
-            return ChatOpenAI(
-                model=self.model,
-                temperature=0.7,
-                max_tokens=1024,
-                openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
-            )
+            return super().get_llm()
 
         provider = self._llm_config.name
 
@@ -82,16 +78,12 @@ class GoogleCalendarAIAssistant(AIAssistant):
                 google_api_key=getattr(settings, 'GOOGLE_API_KEY', '')
             )
         else:
-            # Fallback para OpenAI se provider não reconhecido
             return ChatOpenAI(
                 model=self._llm_config.model,
                 temperature=self._llm_config.temperature,
                 max_tokens=self._llm_config.max_tokens,
                 openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
             )
-
-    def get_instructions(self):
-        return f"{self.instructions}\n\nData e hora atual: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
 
     @method_tool
     def listar_eventos_calendar(self, numero_whatsapp: str, max_resultados: int = 10) -> str:

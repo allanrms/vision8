@@ -352,6 +352,12 @@ Sua conta foi criada com sucesso! Aqui estão suas credenciais de acesso:
 
 📊 Seu perfil já está configurado com mais de 60 categorias financeiras prontas para uso!
 
+💬 *Como usar:*
+• Envie mensagens sobre suas despesas e receitas
+• Exemplo: "Gastei R$ 50 no supermercado"
+• Consulte suas finanças quando quiser
+• Peça relatórios e análises dos seus gastos
+
 💡 *Dica:* Guarde suas credenciais em um local seguro. Você pode usar o sistema via WhatsApp ou acessar o dashboard pelo link acima."""
 
                 evolution_api.send_text_message(from_number, welcome_msg)

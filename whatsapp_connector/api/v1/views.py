@@ -119,8 +119,8 @@ class EvolutionWebhookView(APIView):
                 print(f'config_type: {config_type}')
                 print(f'llm_config: {llm_config}')
                 if llm_config:
-                    ai = create_llm_service(llm_config, use_django_ai_assistant=True, user=instance_owner)
-                    ai.send_text_message(message_history.content, message_history.chat_session)
+                    ai = create_llm_service(llm_config, user=instance_owner)
+                    response_msg = ai.send_text_message(message_history.content, message_history.chat_session)
                 else:
                     # Fallback: usar configuração padrão ou mostrar erro
                     response_msg = "⚠️ Nenhuma configuração de IA foi encontrada para esta instância. Configure um LLM Provider no painel administrativo."

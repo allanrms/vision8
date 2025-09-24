@@ -146,9 +146,17 @@ class AgentLLMService:
     Service principal que gerencia diferentes provedores LLM usando django-ai-assistant
     """
 
-    def __init__(self, llm_config: LLMProviderConfig):
+    def __init__(self, llm_config: LLMProviderConfig, user=None):
         self.llm_config = llm_config
-        self.assistant = DjangoAIAssistantService(llm_config)
+
+        if llm_config.config_type == 'finance' and user:
+            from finance.ai_assistants import FinanceAIAssistant
+            self.assistant = FinanceAIAssistant(user=user, llm_config=llm_config)
+        elif llm_config.config_type == 'calendar' and user:
+            from google_calendar.ai_assistants import GoogleCalendarAIAssistant
+            self.assistant = GoogleCalendarAIAssistant(user=user, llm_config=llm_config)
+        else:
+            self.assistant = DjangoAIAssistantService(llm_config)
 
     def send_text_message(self, message_content: str, chat_session):
         """
@@ -688,7 +696,7 @@ class AgentLLMService:
 
 
 # Factory function para criar services baseados no provider
-def create_llm_service(llm_config: LLMProviderConfig, use_django_ai_assistant: bool = True, user=None):
+def create_llm_service(llm_config: LLMProviderConfig, user=None):
     """
     Factory function para criar o service apropriado baseado na configuração LLM
 
@@ -700,18 +708,4 @@ def create_llm_service(llm_config: LLMProviderConfig, use_django_ai_assistant: b
     Returns:
         Service instance apropriado
     """
-    if use_django_ai_assistant:
-        # Verificar se é um assistente especializado
-        if llm_config.config_type == 'finance' and user:
-            from finance.ai_assistants import FinanceAIAssistant
-            return FinanceAIAssistant(user=user, llm_config=llm_config)
-        elif llm_config.config_type == 'calendar' and user:
-            from google_calendar.ai_assistants import GoogleCalendarAIAssistant
-            return GoogleCalendarAIAssistant(user=user, llm_config=llm_config)
-
-        # Assistente genérico
-        return AgentLLMService(llm_config)
-    else:
-        # Fallback para service legado
-        # return OpenAIService(llm_config)
-        return None
+    return AgentLLMService(user=user, llm_config=llm_config)

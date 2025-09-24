@@ -576,7 +576,7 @@
         }
 
         // Variáveis com valores numéricos (sem formatação brasileira)
-        const totalExpenses = {{ total_expenses|default:0 }};
+        const totalExpenses = parseFloat("{{ total_expenses|default:0|stringformat:'f' }}".replace(',', '.'));
 
         // Debug - verificar se os dados existem
         console.log('=== DADOS DOS GRÁFICOS ===');
@@ -874,9 +874,10 @@
                             drawBorder: false
                         },
                         ticks: {
-                            maxRotation: 0,
+                            maxRotation: 45,
                             minRotation: 0,
-                            autoSkip: false,
+                            autoSkip: true,
+                            maxTicksLimit: 15,
                             color: '#94a3b8',
                             font: {
                                 size: 11

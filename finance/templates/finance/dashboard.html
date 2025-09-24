@@ -1,0 +1,967 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Dashboard - Orbi</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .top-navbar {
+            background: #1a1a1a;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            font-weight: 600;
+            font-size: 1.25rem;
+            padding: 1rem 0;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 0;
+            list-style: none;
+        }
+
+        .navbar-menu a {
+            color: #999;
+            text-decoration: none;
+            padding: 1.25rem 1.5rem;
+            display: block;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .navbar-menu a:hover {
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .navbar-menu a.active {
+            color: white;
+            background: #2a2a2a;
+            border-bottom-color: #667eea;
+        }
+
+        .header {
+            background: #fff;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .period-selector input[type="date"] {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: #2c3e50;
+        }
+
+        .period-selector button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .period-selector button:hover {
+            background: #5568d3;
+        }
+
+        .quick-filters {
+            display: flex;
+            gap: 0.25rem;
+            margin-right: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover,
+        .quick-btn.active {
+            background: #f1f5f9;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .left-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 300px 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar-container {
+                padding: 0 1rem;
+            }
+
+            .navbar-menu {
+                display: none;
+            }
+
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+
+            .quick-filters {
+                margin-right: 0;
+                width: 100%;
+                justify-content: space-between;
+                margin-bottom: 0.75rem;
+            }
+
+            .quick-btn {
+                flex: 1;
+                text-align: center;
+            }
+
+            .period-selector {
+                width: 100%;
+            }
+
+            .period-selector form {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .period-selector input[type="date"] {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .period-selector button {
+                width: 100%;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .main-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .left-sidebar {
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .card-value {
+                font-size: 1.5rem;
+            }
+
+            .balance-card .card-value {
+                font-size: 1.75rem;
+            }
+
+            .chart-section {
+                padding: 1.25rem;
+            }
+
+            .chart-container {
+                height: 220px;
+            }
+
+            .chart-title {
+                font-size: 0.95rem;
+            }
+
+            .expenses-card {
+                padding: 1.25rem;
+            }
+
+            .categories-list {
+                padding: 1.25rem;
+            }
+
+            .category-name {
+                font-size: 0.8rem;
+            }
+
+            .category-amount {
+                font-size: 0.8rem;
+            }
+
+            .movement-chart {
+                padding: 1.25rem;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .card-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            font-weight: 400;
+        }
+
+        .card-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .value-green { color: #10b981; }
+        .value-red { color: #ef4444; }
+        .tag-income {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .tag-expense {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .balance-card .card-label {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .balance-card .card-value {
+            color: white;
+            font-size: 2.25rem;
+        }
+
+        .balance-card .card-subtitle {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .chart-section {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .chart-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 968px) {
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .expenses-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .expenses-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .expenses-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.375rem 0.75rem;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #1e293b;
+            color: white;
+        }
+
+        .donut-wrapper {
+            position: relative;
+            height: 280px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .categories-list {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.875rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .category-item:last-child {
+            border-bottom: none;
+        }
+
+        .category-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .category-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .category-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .category-value {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .category-amount {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .category-percentage {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .movement-chart {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                💰 Orbi Finance
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="{% url 'finance:dashboard' %}" class="active">Visão Geral</a></li>
+                <li><a href="#">Transações</a></li>
+                <li><a href="{% url 'finance:categories' %}">Minhas Categorias</a></li>
+                <li><a href="#">Agenda</a></li>
+                <li><a href="#">Minha Conta</a></li>
+                <li><a href="#">Sair</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="header">
+        <h1>Visão Geral</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="quick-filters">
+                <button class="quick-btn" onclick="setThisMonth()">Este Mês</button>
+                <button class="quick-btn" onclick="setLastMonth()">Mês Passado</button>
+                <button class="quick-btn" onclick="setLast30Days()">Últimos 30 dias</button>
+            </div>
+            <div class="period-selector">
+                <form method="GET" id="period-form">
+                    <input type="date" name="start_date" id="start_date" value="{{ start_date|date:'Y-m-d' }}" onchange="validateAndSubmit()">
+                    <span style="color: #94a3b8;">até</span>
+                    <input type="date" name="end_date" id="end_date" value="{{ end_date|date:'Y-m-d' }}" onchange="validateAndSubmit()">
+                    <button type="submit">Aplicar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-grid">
+            <div class="left-sidebar">
+                <div class="card balance-card">
+                    <div class="card-label">Resultado do Período</div>
+                    <div class="card-value">R$ <span id="balance-value">{{ balance|floatformat:2|intcomma }}</span></div>
+                    <div class="card-subtitle">{{ start_date|date:"d/m" }} - {{ end_date|date:"d/m/Y" }} ({{ period_days }} dias)</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">Entradas <span class="tag-income">Receitas</span></div>
+                    <div class="card-value value-green">R$ <span id="income-value">{{ total_income|floatformat:2|intcomma }}</span></div>
+                    <div class="card-subtitle">Realizado</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">Saídas <span class="tag-expense">Despesas</span></div>
+                    <div class="card-value value-red">R$ <span id="expenses-value">{{ total_expenses|floatformat:2|intcomma }}</span></div>
+                    <div class="card-subtitle">Realizado</div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">Evolução do Saldo no Período</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="expenses-card">
+                <div class="expenses-header">
+                    <div class="chart-title">Despesas</div>
+                    <div class="expenses-tabs">
+                        <button class="tab-btn active">Pagos</button>
+                        <button class="tab-btn">A Pagar</button>
+                    </div>
+                </div>
+                <div class="donut-wrapper">
+                    <canvas id="expensesPieChart"></canvas>
+                </div>
+            </div>
+
+            <div class="categories-list">
+                <div class="chart-header">
+                    <div class="chart-title">Detalhes por Categoria</div>
+                </div>
+                {% for cat in expenses_by_category %}
+                <div class="category-item">
+                    <div class="category-info">
+                        <div class="category-color" style="background-color: {{ cat.color }}"></div>
+                        <div class="category-name">{{ cat.name }}</div>
+                    </div>
+                    <div class="category-value">
+                        <div class="category-amount">R$ {{ cat.total|floatformat:2|intcomma }}</div>
+                        <div class="category-percentage">{{ cat.percentage|floatformat:1 }}%</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma despesa registrada</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="movement-chart">
+            <div class="chart-header">
+                <div class="chart-title">Movimentação Diária (Entradas e Saídas)</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="movementChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setThisMonth() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            document.getElementById('start_date').value = formatDate(firstDay);
+            document.getElementById('end_date').value = formatDate(lastDay);
+            document.getElementById('period-form').submit();
+        }
+
+        function setLastMonth() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
+
+            document.getElementById('start_date').value = formatDate(firstDay);
+            document.getElementById('end_date').value = formatDate(lastDay);
+            document.getElementById('period-form').submit();
+        }
+
+        function setLast30Days() {
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            document.getElementById('start_date').value = formatDate(thirtyDaysAgo);
+            document.getElementById('end_date').value = formatDate(today);
+            document.getElementById('period-form').submit();
+        }
+
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function validateAndSubmit() {
+            const startDate = new Date(document.getElementById('start_date').value);
+            const endDate = new Date(document.getElementById('end_date').value);
+
+            if (startDate > endDate) {
+                alert('A data de início deve ser anterior à data de fim');
+                return;
+            }
+
+            // Auto submit quando ambas as datas estiverem preenchidas
+            if (document.getElementById('start_date').value && document.getElementById('end_date').value) {
+                document.getElementById('period-form').submit();
+            }
+        }
+
+        // Variáveis com valores numéricos (sem formatação brasileira)
+        const totalExpenses = {{ total_expenses|default:0 }};
+
+        // Debug - verificar se os dados existem
+        console.log('=== DADOS DOS GRÁFICOS ===');
+        console.log('Total Expenses:', totalExpenses);
+        console.log('Evolution Labels:', {{ evolution_labels|safe }});
+        console.log('Evolution Balance:', {{ evolution_balance|safe }});
+
+        // Criar array de raio de pontos baseado em has_movement
+        const hasMovement = {{ evolution_has_movement|safe }};
+        const pointRadiusArray = hasMovement.map(has => has ? 3 : 0);
+        const pointHoverRadiusArray = hasMovement.map(has => has ? 6 : 0);
+
+        // Balance Evolution Chart (Area Chart)
+        const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+        const balanceChart = new Chart(balanceCtx, {
+            type: 'line',
+            data: {
+                labels: {{ evolution_labels|safe }},
+                datasets: [{
+                    label: 'Receitas',
+                    data: {{ evolution_income|safe }},
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: pointRadiusArray,
+                    pointHoverRadius: pointHoverRadiusArray,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'Despesas',
+                    data: {{ evolution_expenses|safe }},
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: pointRadiusArray,
+                    pointHoverRadius: pointHoverRadiusArray,
+                    pointBackgroundColor: '#ef4444',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'Saldo',
+                    data: {{ evolution_balance|safe }},
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: pointRadiusArray,
+                    pointHoverRadius: pointHoverRadiusArray,
+                    pointBackgroundColor: '#667eea',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleColor: '#fff',
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyColor: '#fff',
+                        bodyFont: {
+                            size: 13
+                        },
+                        bodySpacing: 6,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: '#f1f5f9',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            },
+                            color: '#94a3b8',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Expenses Donut Chart
+        const expensesCtx = document.getElementById('expensesPieChart').getContext('2d');
+        const expensesChart = new Chart(expensesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ expense_labels|safe }},
+                datasets: [{
+                    data: {{ expense_values|safe }},
+                    backgroundColor: {{ expense_colors|safe }},
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+
+                    ctx.restore();
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#1e293b';
+
+                    const text = 'R$ ' + totalExpenses.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2 - 10;
+
+                    ctx.fillText(text, textX, textY);
+
+                    ctx.font = '12px sans-serif';
+                    ctx.fillStyle = '#94a3b8';
+                    const subtitle = 'Total Pago';
+                    const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
+                    ctx.fillText(subtitle, subtitleX, textY + 25);
+
+                    ctx.save();
+                }
+            }]
+        });
+
+        // Movement Bar Chart (apenas dias com movimentação)
+        const barLabels = {{ bar_labels|safe }};
+        const barIncome = {{ bar_income|safe }};
+        const barExpenses = {{ bar_expenses|safe }};
+
+        console.log('Bar Labels:', barLabels);
+        console.log('Bar Income:', barIncome);
+        console.log('Bar Expenses:', barExpenses);
+
+        const movementCtx = document.getElementById('movementChart').getContext('2d');
+        const movementChart = new Chart(movementCtx, {
+            type: 'bar',
+            data: {
+                labels: barLabels,
+                datasets: [
+                    {
+                        label: 'Receitas',
+                        data: barIncome,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9
+                    },
+                    {
+                        label: 'Despesas',
+                        data: barExpenses,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        stacked: false,
+                        grid: {
+                            color: '#f1f5f9',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            },
+                            color: '#94a3b8',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        stacked: false,
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            minRotation: 0,
+                            autoSkip: false,
+                            color: '#94a3b8',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

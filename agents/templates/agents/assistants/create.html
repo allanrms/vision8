@@ -1,0 +1,221 @@
+{% extends 'webapp/base.html' %}
+
+{% block title %}Criar Assistant - Orbi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold text-dark">
+        <i class="bi bi-plus-circle me-2"></i>
+        Novo Assistant de IA
+    </h1>
+    <a href="{% url 'agents:assistant_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>
+        Voltar
+    </a>
+</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-robot me-2"></i>
+                    Configure seu Assistant de IA
+                </h5>
+                <p class="card-text text-muted mb-0">
+                    Defina a personalidade, comportamento e parâmetros do seu assistant
+                </p>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <!-- Informações Básicas -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Informações Básicas
+                            </h6>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.display_name.id_for_label }}" class="form-label">
+                                {{ form.display_name.label }}
+                            </label>
+                            {{ form.display_name }}
+                            {% if form.display_name.help_text %}
+                                <div class="form-text">{{ form.display_name.help_text }}</div>
+                            {% endif %}
+                            {% if form.display_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.display_name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }}
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}
+                                <div class="form-text">{{ form.name.help_text }}</div>
+                            {% endif %}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.model.id_for_label }}" class="form-label">
+                                {{ form.model.label }}
+                            </label>
+                            {{ form.model }}
+                            {% if form.model.help_text %}
+                                <div class="form-text">{{ form.model.help_text }}</div>
+                            {% endif %}
+                            {% if form.model.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.model.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.instructions.id_for_label }}" class="form-label">
+                                {{ form.instructions.label }}
+                            </label>
+                            {{ form.instructions }}
+                            {% if form.instructions.help_text %}
+                                <div class="form-text">{{ form.instructions.help_text }}</div>
+                            {% endif %}
+                            {% if form.instructions.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.instructions.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Parâmetros Avançados -->
+                        <div class="col-12 mt-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="bi bi-sliders me-2"></i>
+                                Parâmetros de Geração
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.temperature.id_for_label }}" class="form-label">
+                                {{ form.temperature.label }}
+                            </label>
+                            {{ form.temperature }}
+                            {% if form.temperature.help_text %}
+                                <div class="form-text">{{ form.temperature.help_text }}</div>
+                            {% endif %}
+                            {% if form.temperature.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.temperature.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.max_tokens.id_for_label }}" class="form-label">
+                                {{ form.max_tokens.label }}
+                            </label>
+                            {{ form.max_tokens }}
+                            {% if form.max_tokens.help_text %}
+                                <div class="form-text">{{ form.max_tokens.help_text }}</div>
+                            {% endif %}
+                            {% if form.max_tokens.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.max_tokens.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.top_p.id_for_label }}" class="form-label">
+                                {{ form.top_p.label }}
+                            </label>
+                            {{ form.top_p }}
+                            {% if form.top_p.help_text %}
+                                <div class="form-text">{{ form.top_p.help_text }}</div>
+                            {% endif %}
+                            {% if form.top_p.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.top_p.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.presence_penalty.id_for_label }}" class="form-label">
+                                {{ form.presence_penalty.label }}
+                            </label>
+                            {{ form.presence_penalty }}
+                            {% if form.presence_penalty.help_text %}
+                                <div class="form-text">{{ form.presence_penalty.help_text }}</div>
+                            {% endif %}
+                            {% if form.presence_penalty.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.presence_penalty.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.frequency_penalty.id_for_label }}" class="form-label">
+                                {{ form.frequency_penalty.label }}
+                            </label>
+                            {{ form.frequency_penalty }}
+                            {% if form.frequency_penalty.help_text %}
+                                <div class="form-text">{{ form.frequency_penalty.help_text }}</div>
+                            {% endif %}
+                            {% if form.frequency_penalty.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.frequency_penalty.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Arquivos de Contexto -->
+                        <div class="col-12 mt-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="bi bi-file-earmark-text me-2"></i>
+                                Arquivos de Contexto
+                            </h6>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Dica:</strong> Após criar o assistant, você poderá adicionar arquivos que serão usados como contexto para personalizar as respostas (PDFs, documentos, textos, etc.).
+                            </div>
+                            <div class="d-flex align-items-center justify-content-center p-4 border-2 border-dashed rounded" style="border-color: #dee2e6;">
+                                <div class="text-center">
+                                    <i class="bi bi-upload text-muted mb-2" style="font-size: 2rem;"></i>
+                                    <h6 class="text-muted">Adicione arquivos após criar o assistant</h6>
+                                    <p class="text-muted mb-0 small">
+                                        Suporte para PDF, DOCX, TXT, MD, CSV, JSON e HTML
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'agents:assistant_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Criar Assistant
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

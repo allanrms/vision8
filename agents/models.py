@@ -139,11 +139,24 @@ class LLMProviderConfig(BaseUUIDModel, HistoryBaseModel):
         ("other", "Outro"),
     )
 
+    CONFIG_TYPES = (
+        ("finance", "Financeiro"),
+        ("calendar", "Agenda"),
+        ("general", "Geral"),
+    )
+
     display_name = models.CharField(
         max_length=100,
         verbose_name="Nome da Configuração",
         help_text="Nome para identificar esta configuração (ex: 'OpenAI GPT-4 - Suporte')",
         default="Configuração LLM"
+    )
+    config_type = models.CharField(
+        max_length=20,
+        choices=CONFIG_TYPES,
+        default="general",
+        verbose_name="Tipo de Configuração",
+        help_text="Define o contexto de uso desta configuração"
     )
     name = models.CharField(
         max_length=50,

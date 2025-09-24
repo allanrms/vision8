@@ -1,561 +1,464 @@
+{% extends 'webapp/base.html' %}
 {% load humanize %}
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minhas Categorias - Orbi Finance</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f8f9fa;
-            color: #2c3e50;
-        }
+{% block title %}Minhas Categorias - Vision{% endblock %}
 
-        .top-navbar {
-            background: #1a1a1a;
-            padding: 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+{% block page_title %}Categorias{% endblock %}
 
-        .navbar-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-        }
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+    }
 
-        .navbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: white;
-            font-weight: 600;
-            font-size: 1.25rem;
-            padding: 1rem 0;
-        }
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
 
-        .navbar-menu {
-            display: flex;
-            gap: 0;
-            list-style: none;
-        }
+    .page-subtitle {
+        color: #64748b;
+        font-size: 0.95rem;
+    }
 
-        .navbar-menu a {
-            color: #999;
-            text-decoration: none;
-            padding: 1.25rem 1.5rem;
-            display: block;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-            border-bottom: 3px solid transparent;
-        }
+    .create-btn {
+        background: white;
+        border: 1px solid #e1e8ed;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #2c3e50;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        margin-bottom: 1.5rem;
+    }
 
-        .navbar-menu a:hover {
-            color: white;
-            background: rgba(255,255,255,0.05);
-        }
+    .create-btn:hover {
+        background: #f8f9fa;
+        border-color: #667eea;
+    }
 
-        .navbar-menu a.active {
-            color: white;
-            background: #2a2a2a;
-            border-bottom-color: #667eea;
-        }
+    .categories-grid {
+        display: grid;
+        gap: 1rem;
+    }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+    .category-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        transition: all 0.2s;
+    }
 
-        .page-header {
-            margin-bottom: 2rem;
-        }
+    .category-card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
 
+    .category-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .category-color-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+    }
+
+    .category-name {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .category-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e1e8ed;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+        background: #f8f9fa;
+        border-color: #667eea;
+        color: #667eea;
+    }
+
+    .action-btn.delete:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #94a3b8;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1e293b;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e1e8ed;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .color-picker-group {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .color-option {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 3px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .color-option:hover {
+        transform: scale(1.1);
+    }
+
+    .color-option.selected {
+        border-color: #1e293b;
+    }
+
+    .color-custom {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .color-preview {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        border: 2px solid #e1e8ed;
+    }
+
+    .color-input {
+        padding: 0.5rem;
+        border: 1px solid #e1e8ed;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 0.875rem;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .submit-btn:hover {
+        background: #059669;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #94a3b8;
+    }
+
+    @media (max-width: 768px) {
         .page-title {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
         }
 
         .page-subtitle {
-            color: #64748b;
-            font-size: 0.95rem;
-        }
-
-        .create-btn {
-            background: white;
-            border: 1px solid #e1e8ed;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #2c3e50;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-            margin-bottom: 1.5rem;
-        }
-
-        .create-btn:hover {
-            background: #f8f9fa;
-            border-color: #667eea;
-        }
-
-        .categories-grid {
-            display: grid;
-            gap: 1rem;
+            font-size: 0.85rem;
         }
 
         .category-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.25rem 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            transition: all 0.2s;
-        }
-
-        .category-card:hover {
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .category-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .category-color-dot {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
+            padding: 1rem;
         }
 
         .category-name {
-            font-size: 1rem;
-            font-weight: 500;
-            color: #1e293b;
-        }
-
-        .category-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .action-btn {
-            padding: 0.5rem 1rem;
-            border: 1px solid #e1e8ed;
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            color: #64748b;
-            transition: all 0.2s;
-        }
-
-        .action-btn:hover {
-            background: #f8f9fa;
-            border-color: #667eea;
-            color: #667eea;
-        }
-
-        .action-btn.delete:hover {
-            border-color: #ef4444;
-            color: #ef4444;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #94a3b8;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
-
-        .modal-close:hover {
-            background: #f1f5f9;
-            color: #1e293b;
-        }
-
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            color: #1e293b;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #1e293b;
-            font-size: 0.95rem;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .color-picker-group {
-            display: flex;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .color-option {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .color-option:hover {
-            transform: scale(1.1);
-        }
-
-        .color-option.selected {
-            border-color: #1e293b;
-        }
-
-        .color-custom {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .color-preview {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
-            border: 2px solid #e1e8ed;
-        }
-
-        .color-input {
-            padding: 0.5rem;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            font-family: monospace;
             font-size: 0.9rem;
         }
 
-        .submit-btn {
-            width: 100%;
-            padding: 0.875rem;
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
+        .action-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
         }
 
-        .submit-btn:hover {
-            background: #059669;
+        .modal-content {
+            width: 95%;
+            padding: 1.5rem;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: #94a3b8;
+        .modal-title {
+            font-size: 1.25rem;
         }
 
-        @media (max-width: 768px) {
-            .navbar-container {
-                padding: 0 1rem;
-            }
-
-            .navbar-menu {
-                display: none;
-            }
-
-            .container {
-                padding: 1rem;
-            }
-
-            .page-title {
-                font-size: 1.25rem;
-            }
-
-            .page-subtitle {
-                font-size: 0.85rem;
-            }
-
-            .category-card {
-                padding: 1rem;
-            }
-
-            .category-name {
-                font-size: 0.9rem;
-            }
-
-            .action-btn {
-                padding: 0.4rem 0.75rem;
-                font-size: 0.8rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 1.5rem;
-            }
-
-            .modal-title {
-                font-size: 1.25rem;
-            }
-
-            .color-picker-group {
-                gap: 0.5rem;
-            }
-
-            .color-option {
-                width: 32px;
-                height: 32px;
-            }
+        .color-picker-group {
+            gap: 0.5rem;
         }
-    </style>
-</head>
-<body>
-    <nav class="top-navbar">
-        <div class="navbar-container">
-            <div class="navbar-brand">
-                💰 Orbi Finance
-            </div>
-            <ul class="navbar-menu">
-                <li><a href="{% url 'finance:dashboard' %}">Visão Geral</a></li>
-                <li><a href="#">Transações</a></li>
-                <li><a href="{% url 'finance:categories' %}" class="active">Minhas Categorias</a></li>
-                <li><a href="#">Agenda</a></li>
-                <li><a href="#">Minha Conta</a></li>
-                <li><a href="#">Sair</a></li>
-            </ul>
+
+        .color-option {
+            width: 32px;
+            height: 32px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Gerenciar Categorias Personalizadas</h1>
+    <p class="page-subtitle">A IA já é capaz de identificar categorias automaticamente. No entanto, se preferir, você pode personalizar as categorias de acordo com suas necessidades.</p>
+</div>
+
+<button class="create-btn" onclick="openModal()">
+    + Crie sua categoria
+</button>
+
+<div class="categories-grid">
+    {% for category in categories %}
+    <div class="category-card" data-category-id="{{ category.id }}" data-category-name="{{ category.name }}" data-category-color="{{ category.color }}">
+        <div class="category-left">
+            <div class="category-color-dot" style="background-color: {{ category.color }}"></div>
+            <div class="category-name">{{ category.name }}</div>
         </div>
-    </nav>
-
-    <div class="container">
-        <div class="page-header">
-            <h1 class="page-title">Gerenciar Categorias Personalizadas</h1>
-            <p class="page-subtitle">A IA já é capaz de identificar categorias automaticamente. No entanto, se preferir, você pode personalizar as categorias de acordo com suas necessidades.</p>
-        </div>
-
-        <button class="create-btn" onclick="openModal()">
-            + Crie sua categoria
-        </button>
-
-        <div class="categories-grid">
-            {% for category in categories %}
-            <div class="category-card" data-category-id="{{ category.id }}" data-category-name="{{ category.name }}" data-category-color="{{ category.color }}">
-                <div class="category-left">
-                    <div class="category-color-dot" style="background-color: {{ category.color }}"></div>
-                    <div class="category-name">{{ category.name }}</div>
-                </div>
-                <div class="category-actions">
-                    <button class="action-btn" onclick="editCategory(this.closest('.category-card'))">Editar</button>
-                    <button class="action-btn delete" onclick="deleteCategory(this.closest('.category-card'))">Excluir</button>
-                </div>
-            </div>
-            {% empty %}
-            <div class="empty-state">
-                <p>Nenhuma categoria personalizada criada ainda.</p>
-            </div>
-            {% endfor %}
+        <div class="category-actions">
+            <button class="action-btn" onclick="editCategory(this.closest('.category-card'))">Editar</button>
+            <button class="action-btn delete" onclick="deleteCategory(this.closest('.category-card'))">Excluir</button>
         </div>
     </div>
-
-    <div class="modal" id="categoryModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">×</button>
-            <h2 class="modal-title" id="modalTitle">Adicionar Categoria</h2>
-
-            <form id="categoryForm" method="POST" action="{% url 'finance:category_create' %}">
-                {% csrf_token %}
-                <input type="hidden" id="categoryId" name="id" value="">
-
-                <div class="form-group">
-                    <label class="form-label">Nome da Categoria</label>
-                    <input type="text" class="form-input" id="categoryName" name="name" placeholder="Ex: Alimentação" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Cor da Categoria</label>
-                    <div class="color-picker-group">
-                        <div class="color-option" style="background-color: #ef4444" data-color="#ef4444"></div>
-                        <div class="color-option" style="background-color: #f97316" data-color="#f97316"></div>
-                        <div class="color-option" style="background-color: #f59e0b" data-color="#f59e0b"></div>
-                        <div class="color-option" style="background-color: #eab308" data-color="#eab308"></div>
-                        <div class="color-option" style="background-color: #84cc16" data-color="#84cc16"></div>
-                        <div class="color-option" style="background-color: #10b981" data-color="#10b981"></div>
-                        <div class="color-option" style="background-color: #14b8a6" data-color="#14b8a6"></div>
-                        <div class="color-option" style="background-color: #06b6d4" data-color="#06b6d4"></div>
-                        <div class="color-option" style="background-color: #3b82f6" data-color="#3b82f6"></div>
-                        <div class="color-option" style="background-color: #6366f1" data-color="#6366f1"></div>
-                        <div class="color-option" style="background-color: #8b5cf6" data-color="#8b5cf6"></div>
-                        <div class="color-option" style="background-color: #a855f7" data-color="#a855f7"></div>
-                        <div class="color-option" style="background-color: #ec4899" data-color="#ec4899"></div>
-                        <div class="color-option" style="background-color: #f43f5e" data-color="#f43f5e"></div>
-                        <div class="color-option" style="background-color: #1e293b" data-color="#1e293b"></div>
-                    </div>
-
-                    <div class="color-custom">
-                        <div class="color-preview" id="colorPreview" style="background-color: #1e293b"></div>
-                        <input type="text" class="color-input" id="colorInput" name="color" value="#1e293b" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
-                    </div>
-                </div>
-
-                <button type="submit" class="submit-btn">Salvar Categoria</button>
-            </form>
-        </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>Nenhuma categoria personalizada criada ainda.</p>
     </div>
+    {% endfor %}
+</div>
 
-    <script>
-        const modal = document.getElementById('categoryModal');
-        const colorOptions = document.querySelectorAll('.color-option');
-        const colorInput = document.getElementById('colorInput');
-        const colorPreview = document.getElementById('colorPreview');
+<div class="modal" id="categoryModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <h2 class="modal-title" id="modalTitle">Adicionar Categoria</h2>
 
-        function openModal() {
-            document.getElementById('modalTitle').textContent = 'Adicionar Categoria';
-            document.getElementById('categoryForm').action = "{% url 'finance:category_create' %}";
-            document.getElementById('categoryId').value = '';
-            document.getElementById('categoryName').value = '';
-            selectColor('#1e293b');
-            modal.classList.add('active');
+        <form id="categoryForm" method="POST" action="{% url 'finance:category_create' %}">
+            {% csrf_token %}
+            <input type="hidden" id="categoryId" name="id" value="">
+
+            <div class="form-group">
+                <label class="form-label">Nome da Categoria</label>
+                <input type="text" class="form-input" id="categoryName" name="name" placeholder="Ex: Alimentação" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Cor da Categoria</label>
+                <div class="color-picker-group">
+                    <div class="color-option" style="background-color: #ef4444" data-color="#ef4444"></div>
+                    <div class="color-option" style="background-color: #f97316" data-color="#f97316"></div>
+                    <div class="color-option" style="background-color: #f59e0b" data-color="#f59e0b"></div>
+                    <div class="color-option" style="background-color: #eab308" data-color="#eab308"></div>
+                    <div class="color-option" style="background-color: #84cc16" data-color="#84cc16"></div>
+                    <div class="color-option" style="background-color: #10b981" data-color="#10b981"></div>
+                    <div class="color-option" style="background-color: #14b8a6" data-color="#14b8a6"></div>
+                    <div class="color-option" style="background-color: #06b6d4" data-color="#06b6d4"></div>
+                    <div class="color-option" style="background-color: #3b82f6" data-color="#3b82f6"></div>
+                    <div class="color-option" style="background-color: #6366f1" data-color="#6366f1"></div>
+                    <div class="color-option" style="background-color: #8b5cf6" data-color="#8b5cf6"></div>
+                    <div class="color-option" style="background-color: #a855f7" data-color="#a855f7"></div>
+                    <div class="color-option" style="background-color: #ec4899" data-color="#ec4899"></div>
+                    <div class="color-option" style="background-color: #f43f5e" data-color="#f43f5e"></div>
+                    <div class="color-option" style="background-color: #1e293b" data-color="#1e293b"></div>
+                </div>
+
+                <div class="color-custom">
+                    <div class="color-preview" id="colorPreview" style="background-color: #1e293b"></div>
+                    <input type="text" class="color-input" id="colorInput" name="color" value="#1e293b" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Salvar Categoria</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const modal = document.getElementById('categoryModal');
+    const colorOptions = document.querySelectorAll('.color-option');
+    const colorInput = document.getElementById('colorInput');
+    const colorPreview = document.getElementById('colorPreview');
+
+    function openModal() {
+        document.getElementById('modalTitle').textContent = 'Adicionar Categoria';
+        document.getElementById('categoryForm').action = "{% url 'finance:category_create' %}";
+        document.getElementById('categoryId').value = '';
+        document.getElementById('categoryName').value = '';
+        selectColor('#1e293b');
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+    }
+
+    function editCategory(cardElement) {
+        const id = cardElement.dataset.categoryId;
+        const name = cardElement.dataset.categoryName;
+        const color = cardElement.dataset.categoryColor;
+
+        document.getElementById('modalTitle').textContent = 'Editar Categoria';
+        document.getElementById('categoryForm').action = '/finance/categories/' + id + '/update/';
+        document.getElementById('categoryId').value = id;
+        document.getElementById('categoryName').value = name;
+        selectColor(color);
+        modal.classList.add('active');
+    }
+
+    function deleteCategory(cardElement) {
+        const id = cardElement.dataset.categoryId;
+
+        if (confirm('Tem certeza que deseja excluir esta categoria?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/finance/categories/' + id + '/delete/';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
+            form.submit();
         }
+    }
 
-        function closeModal() {
-            modal.classList.remove('active');
+    function selectColor(color) {
+        colorOptions.forEach(opt => opt.classList.remove('selected'));
+        const selectedOpt = Array.from(colorOptions).find(opt => opt.dataset.color === color);
+        if (selectedOpt) {
+            selectedOpt.classList.add('selected');
         }
+        colorInput.value = color;
+        colorPreview.style.backgroundColor = color;
+    }
 
-        function editCategory(cardElement) {
-            const id = cardElement.dataset.categoryId;
-            const name = cardElement.dataset.categoryName;
-            const color = cardElement.dataset.categoryColor;
+    colorOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            selectColor(option.dataset.color);
+        });
+    });
 
-            document.getElementById('modalTitle').textContent = 'Editar Categoria';
-            document.getElementById('categoryForm').action = '/finance/categories/' + id + '/update/';
-            document.getElementById('categoryId').value = id;
-            document.getElementById('categoryName').value = name;
-            selectColor(color);
-            modal.classList.add('active');
-        }
-
-        function deleteCategory(cardElement) {
-            const id = cardElement.dataset.categoryId;
-
-            if (confirm('Tem certeza que deseja excluir esta categoria?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/finance/categories/' + id + '/delete/';
-
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrfmiddlewaretoken';
-                csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-                form.appendChild(csrfInput);
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-
-        function selectColor(color) {
-            colorOptions.forEach(opt => opt.classList.remove('selected'));
-            const selectedOpt = Array.from(colorOptions).find(opt => opt.dataset.color === color);
-            if (selectedOpt) {
-                selectedOpt.classList.add('selected');
-            }
-            colorInput.value = color;
+    colorInput.addEventListener('input', (e) => {
+        const color = e.target.value;
+        if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
             colorPreview.style.backgroundColor = color;
+            colorOptions.forEach(opt => opt.classList.remove('selected'));
         }
+    });
 
-        colorOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                selectColor(option.dataset.color);
-            });
-        });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
 
-        colorInput.addEventListener('input', (e) => {
-            const color = e.target.value;
-            if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
-                colorPreview.style.backgroundColor = color;
-                colorOptions.forEach(opt => opt.classList.remove('selected'));
-            }
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal();
-            }
-        });
-
-        colorOptions[0].classList.add('selected');
-    </script>
-</body>
-</html>
+    colorOptions[0].classList.add('selected');
+</script>
+{% endblock %}

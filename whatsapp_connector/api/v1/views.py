@@ -5,10 +5,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+
+from agents.models import LLMProviderConfig
 from agents.services import create_llm_service
+from utils.ai_assistants import IntentRouterAssistant
 from whatsapp_connector.models import MessageHistory, EvolutionInstance
 from whatsapp_connector.services import ImageProcessingService, EvolutionAPIService
 from whatsapp_connector.utils import transcribe_audio_from_bytes, clean_number_whatsapp
+
+from django_ai_assistant.models import Thread
 
 
 # @method_decorator(csrf_exempt, name='dispatch')
@@ -84,51 +89,41 @@ class EvolutionWebhookView(APIView):
 
             # Processar diferentes tipos de mensagens como o aplicativo Orbi
             if message_data.get('has_audio') or message_history.message_type == 'audio':
-                self._process_audio_message(message_history, evolution_api, data, evolution_instance)
-                return Response({
-                    'status': 'success',
-                    'message': 'Audio message processed successfully'
-                }, status=status.HTTP_200_OK)
+                message_history = self._process_audio_message(message_history, evolution_api, data)
 
             elif message_data.get('has_image') or message_history.message_type == 'image':
-                self._process_image_message(message_history, data, evolution_instance)
-                return Response({
-                    'status': 'success',
-                    'message': 'Image message processed successfully'
-                }, status=status.HTTP_200_OK)
+                message_history = self._process_image_message(message_history, data, evolution_instance)
 
-            elif message_history.content or message_history.message_type == 'text':  # Text message
+            if message_history.content:
+            # elif message_history.content or message_history.message_type == 'text':  # Text message
                 # Marcar como processando
                 message_history.processing_status = 'processing'
                 message_history.save()
 
-                # Verificar o role do dono da instância
+                # Usar configuração da instância
                 instance_owner = evolution_instance.owner if evolution_instance else None
 
-                if instance_owner and hasattr(instance_owner, 'role') and instance_owner.role == 'finance':
-                    # Usar finance AI assistant
-                    from finance.ai_assistants import FinanceAIAssistant
-                    from django_ai_assistant.models import Thread
+                intent_router_assistant = IntentRouterAssistant()
 
-                    thread, _ = Thread.objects.get_or_create(
-                        name=f"finance_{message_history.chat_session.from_number}"
-                    )
+                thread, _ = Thread.objects.get_or_create(
+                    name=f"{message_history.chat_session.from_number}"
+                )
 
-                    finance_assistant = FinanceAIAssistant(user=instance_owner)
-                    response_msg = finance_assistant.run(
-                        message=message_history.content,
-                        thread_id=thread.id
-                    )
+                config_type = intent_router_assistant.run(
+                    message=message_history.content,
+                    thread_id=thread.id
+                )
+
+
+                llm_config = LLMProviderConfig.objects.filter(config_type=config_type).first()
+                print(f'config_type: {config_type}')
+                print(f'llm_config: {llm_config}')
+                if llm_config:
+                    ai = create_llm_service(llm_config, use_django_ai_assistant=True, user=instance_owner)
+                    ai.send_text_message(message_history.content, message_history.chat_session)
                 else:
-                    # Usar agents padrão com configuração da instância
-                    llm_config = evolution_instance.llm_config if evolution_instance else None
-
-                    if llm_config:
-                        ai = create_llm_service(llm_config, use_django_ai_assistant=True)
-                        response_msg = ai.send_text_message(message_history.content, message_history.chat_session)
-                    else:
-                        # Fallback: usar configuração padrão ou mostrar erro
-                        response_msg = "⚠️ Nenhuma configuração de IA foi encontrada para esta instância. Configure um LLM Provider no painel administrativo."
+                    # Fallback: usar configuração padrão ou mostrar erro
+                    response_msg = "⚠️ Nenhuma configuração de IA foi encontrada para esta instância. Configure um LLM Provider no painel administrativo."
 
             # Processar resposta estruturada ou simples - só se houver resposta
             result = False
@@ -374,7 +369,7 @@ class EvolutionWebhookView(APIView):
         )
         return message_history
     
-    def _process_audio_message(self, message, evolution_api, raw_data, evolution_instance):
+    def _process_audio_message(self, message, evolution_api, raw_data) -> str:
         """Process audio message like orbi app"""
         try:
             print("Mensagem de áudio detectada")
@@ -392,41 +387,18 @@ class EvolutionWebhookView(APIView):
                 message.audio_transcription = transcription
                 message.content = transcription  # Use transcription as message content
                 message.save()
-                
-                # Processar com assistente AI usando a transcrição
-                llm_config = evolution_instance.llm_config if evolution_instance else None
-                
-                if llm_config:
-                    ai = create_llm_service(llm_config, use_django_ai_assistant=True)
-                    response_msg = ai.send_text_message(transcription, message.chat_session)
-                    
-                    # Enviar resposta de volta ao WhatsApp
-                    result = self._send_response_to_whatsapp(evolution_api, message.chat_session.from_number, response_msg)
-                    
-                    if result:
-                        message.response = response_msg
-                        message.processing_status = 'completed'
-                        message.save()
-                        print(f"✅ Áudio processado e resposta enviada para {message.chat_session.from_number}")
-                    else:
-                        message.processing_status = 'failed'
-                        message.save()
-                        print(f"❌ Falha ao enviar resposta do áudio")
-                else:
-                    # Fallback: usar configuração padrão ou mostrar erro
-                    error_msg = "⚠️ Nenhuma configuração de IA foi encontrada para esta instância. Configure um LLM Provider no painel administrativo."
-                    evolution_api.send_text_message(message.chat_session.from_number, error_msg)
-                    message.processing_status = 'failed'
-                    message.save()
             else:
                 print("❌ Falha ao descriptografar áudio")
                 message.processing_status = 'failed'
                 message.save()
-                
+
         except Exception as e:
             print(f"Error processing audio message: {e}")
             message.processing_status = 'failed'
             message.save()
+
+        finally:
+            return message
     
     def _process_text_message(self, message, n8n_service):
         """Process text message like orbi app"""
@@ -507,6 +479,9 @@ class EvolutionWebhookView(APIView):
             print(f"Error processing image message: {e}")
             message.processing_status = 'failed'
             message.save()
+
+        finally:
+            return message
     
     def _get_evolution_instance(self, message_data):
         """

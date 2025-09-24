@@ -172,61 +172,57 @@ class AgentLLMService:
             # Recuperar últimas 10 mensagens da sessão em ordem cronológica
             last_messages = ChatHistory.objects.filter(session_id=chat_session.from_number, closed=False).order_by("created_at")[:10]
 
-            # PRIMEIRO: Verificar se é uma solicitação relacionada a calendário
-            calendar_response = self._try_calendar_assistant(message_content, chat_session, last_messages)
-            if calendar_response:
-                return calendar_response
-
-            # SEGUNDO: Verificar se é uma solicitação relacionada a finanças
-            finance_response = self._try_finance_assistant(message_content, chat_session, last_messages)
-            if finance_response:
-                return finance_response
-
             # Montar contexto do sistema com instruções estruturadas
             system_content = self._build_enhanced_system_prompt()
 
-            # Adicionar instruções para resposta estruturada
-            system_content += f"\n\n=== INSTRUÇÕES DE FORMATAÇÃO DE RESPOSTA ===\n"
-            system_content += "Quando você precisar enviar tanto texto quanto um arquivo/link para o usuário, formate sua resposta EXATAMENTE assim:\n"
-            system_content += '{"text": "sua mensagem aqui", "file": "https://url-do-arquivo.com/arquivo.pdf"}\n'
-            system_content += "- Use APENAS esse formato JSON quando quiser enviar texto + arquivo\n"
-            system_content += "- O campo 'text' deve conter sua mensagem de texto\n"
-            system_content += "- O campo 'file' deve conter a URL COMPLETA do arquivo (obrigatório: http:// ou https://)\n"
-            system_content += "- Para respostas apenas de texto, responda normalmente (sem JSON)\n"
-            system_content += "- NUNCA use apenas nomes de arquivos como 'Cardápio.pdf' - sempre URLs completas\n"
-            system_content += "- Se não tiver URL real do arquivo, NÃO use o formato JSON\n"
+            # PRIMEIRO: Verificar se é uma solicitação relacionada a calendário
+            if self.llm_config.config_type == 'calendar':
+                system_content += """CONTEXTO IMPORTANTE:
+                - Este usuário está enviando mensagens via WhatsApp
+                - O número do WhatsApp é: {whatsapp_number}
+                - Use sempre este número nas funções que requerem numero_whatsapp
+                - Seja direto e objetivo nas respostas
+                - Formate as respostas de forma amigável para WhatsApp
+                - Se o usuário solicitar criação de eventos, use os dados fornecidos ou peça os dados que faltam
+                - Para listar eventos, seja conciso mas informativo
+                - Para verificar disponibilidade, seja claro sobre conflitos{history_context}"""
 
-            # Adicionar contexto dos arquivos
-            context_files_content = self._get_context_files_content()
-            if context_files_content:
-                system_content += f"\n\n=== CONTEXTO ADICIONAL ===\n{context_files_content}"
+            # SEGUNDO: Verificar se é uma solicitação relacionada a finanças
+            if self.llm_config.config_type == 'finance':
+                pass
+                # finance_response = self._try_finance_assistant(message_content, chat_session, last_messages)
+                # if finance_response:
+                #     return finance_response
 
-            # Adicionar informação sobre PDFs que serão anexados
-            pdf_files = self._get_pdf_files()
-            if pdf_files:
-                pdf_names = [pdf.name for pdf in pdf_files]
-                system_content += f"\n\n=== DOCUMENTOS PDF ANEXADOS ===\n"
-                system_content += f"Os seguintes documentos PDF estão anexados nesta conversa: {', '.join(pdf_names)}\n"
-                system_content += "Você pode referenciar e analisar o conteúdo destes PDFs diretamente."
+            # system_content = self._build_enhanced_system_prompt()
 
-            # Adicionar informação sobre imagens que serão anexadas
-            image_files = self._get_image_files()
-            if image_files:
-                image_names = [img.name for img in image_files]
-                system_content += f"\n\n=== IMAGENS ANEXADAS ===\n"
-                system_content += f"As seguintes imagens estão anexadas nesta conversa: {', '.join(image_names)}\n"
-                system_content += "Você pode ver e analisar o conteúdo visual destas imagens diretamente."
-
-            # Adicionar lista de arquivos disponíveis com URLs
-            available_files = self._get_available_files_with_urls()
-            if available_files:
-                system_content += f"\n\n=== ARQUIVOS DISPONÍVEIS PARA ENVIO ===\n"
-                system_content += "Os seguintes arquivos estão disponíveis e podem ser enviados usando o formato JSON:\n"
-                for file_info in available_files:
-                    system_content += f"• **{file_info['name']}**: {file_info['url']}\n"
-                system_content += "\nPara enviar qualquer um destes arquivos, use o formato JSON com a URL exata listada acima."
-
-            # Preparar mensagens usando LangChain format
+            #
+            # # Adicionar informação sobre PDFs que serão anexados
+            # pdf_files = self._get_pdf_files()
+            # if pdf_files:
+            #     pdf_names = [pdf.name for pdf in pdf_files]
+            #     system_content += f"\n\n=== DOCUMENTOS PDF ANEXADOS ===\n"
+            #     system_content += f"Os seguintes documentos PDF estão anexados nesta conversa: {', '.join(pdf_names)}\n"
+            #     system_content += "Você pode referenciar e analisar o conteúdo destes PDFs diretamente."
+            #
+            # # Adicionar informação sobre imagens que serão anexadas
+            # image_files = self._get_image_files()
+            # if image_files:
+            #     image_names = [img.name for img in image_files]
+            #     system_content += f"\n\n=== IMAGENS ANEXADAS ===\n"
+            #     system_content += f"As seguintes imagens estão anexadas nesta conversa: {', '.join(image_names)}\n"
+            #     system_content += "Você pode ver e analisar o conteúdo visual destas imagens diretamente."
+            #
+            # # Adicionar lista de arquivos disponíveis com URLs
+            # available_files = self._get_available_files_with_urls()
+            # if available_files:
+            #     system_content += f"\n\n=== ARQUIVOS DISPONÍVEIS PARA ENVIO ===\n"
+            #     system_content += "Os seguintes arquivos estão disponíveis e podem ser enviados usando o formato JSON:\n"
+            #     for file_info in available_files:
+            #         system_content += f"• **{file_info['name']}**: {file_info['url']}\n"
+            #     system_content += "\nPara enviar qualquer um destes arquivos, use o formato JSON com a URL exata listada acima."
+            #
+            # # Preparar mensagens usando LangChain format
             messages = []
 
             # Adicionar instruções do sistema
@@ -245,33 +241,33 @@ class AgentLLMService:
                 if ai_response.strip():
                     messages.append(AIMessage(content=ai_response))
 
-            # Preparar conteúdo da mensagem atual (com suporte a imagens)
-            user_message_content = []
-
-            # Adicionar texto da mensagem
-            if message_content and message_content.strip():
-                user_message_content.append({
-                    "type": "text",
-                    "text": message_content
-                })
-
-            # Para suporte a imagens no LangChain, precisamos usar ChatOpenAI com vision
-            current_message_content = message_content
-
-            # Se há imagens, precisamos usar um formato especial para o LangChain
-            image_files = self._get_image_files()
-            if image_files:
-                # Para LangChain, vamos incluir referência às imagens no texto
-                image_refs = []
-                for img in image_files:
-                    image_refs.append(f"[IMAGEM ANEXADA: {img.name}]")
-
-                if image_refs:
-                    current_message_content += f"\n\nImagens anexadas: {', '.join(image_refs)}"
-
-            # Adicionar mensagem atual
-            if current_message_content and current_message_content.strip():
-                messages.append(HumanMessage(content=current_message_content))
+            # # Preparar conteúdo da mensagem atual (com suporte a imagens)
+            # user_message_content = []
+            #
+            # # Adicionar texto da mensagem
+            # if message_content and message_content.strip():
+            #     user_message_content.append({
+            #         "type": "text",
+            #         "text": message_content
+            #     })
+            #
+            # # Para suporte a imagens no LangChain, precisamos usar ChatOpenAI com vision
+            # current_message_content = message_content
+            #
+            # # Se há imagens, precisamos usar um formato especial para o LangChain
+            # image_files = self._get_image_files()
+            # if image_files:
+            #     # Para LangChain, vamos incluir referência às imagens no texto
+            #     image_refs = []
+            #     for img in image_files:
+            #         image_refs.append(f"[IMAGEM ANEXADA: {img.name}]")
+            #
+            #     if image_refs:
+            #         current_message_content += f"\n\nImagens anexadas: {', '.join(image_refs)}"
+            #
+            # # Adicionar mensagem atual
+            # if current_message_content and current_message_content.strip():
+            #     messages.append(HumanMessage(content=current_message_content))
 
             # Criar histórico da mensagem humana
             history = ChatHistory.create(
@@ -688,303 +684,32 @@ class AgentLLMService:
 
         return enhanced
 
-    def _try_calendar_assistant(self, message_content: str, chat_session, last_messages=None):
-        """
-        Verifica se a mensagem é relacionada a calendário e usa GoogleCalendarAIAssistant se necessário
 
-        Args:
-            message_content (str): Conteúdo da mensagem
-            chat_session: Sessão do chat
-            last_messages: Últimas mensagens da conversa para contexto
-
-        Returns:
-            str ou None: Resposta da IA de calendário se aplicável, None caso contrário
-        """
-        try:
-            # Normalizar texto para análise
-            import re
-            normalized_text = re.sub(r'\s+', ' ', message_content.lower().strip())
-
-            # Palavras-chave que indicam interesse em calendário
-            calendar_keywords = [
-                # Comandos de listagem
-                'meus eventos', 'minha agenda', 'agenda hoje', 'eventos hoje', 'próximos eventos',
-                'listar eventos', 'ver agenda', 'consultar agenda', 'agenda de hoje', 'agenda da semana',
-                'eventos da semana', 'compromissos', 'reuniões', 'que tenho hoje', 'que tenho amanhã',
-
-                # Comandos de criação
-                'criar evento', 'novo evento', 'agendar', 'marcar reunião', 'marcar compromisso',
-                'criar reunião', 'adicionar evento', 'incluir na agenda', 'colocar na agenda',
-                'evento para', 'reunião com', 'encontro com', 'consulta com',
-
-                # Comandos de disponibilidade
-                'estou livre', 'estou ocupado', 'disponibilidade', 'horário livre', 'agenda livre',
-                'posso às', 'tenho tempo', 'quando posso', 'estou disponível', 'verificar agenda',
-
-                # Palavras relacionadas
-                'calendar', 'calendário', 'google calendar', 'agenda', 'evento', 'reunião',
-                'compromisso', 'horário', 'data', 'hoje', 'amanhã', 'semana', 'mês',
-
-                # Comandos de edição/remoção
-                'cancelar evento', 'remover evento', 'excluir evento', 'alterar evento',
-                'mudar horário', 'reagendar', 'editar evento', 'modificar evento'
-            ]
-
-            # Padrões de data/hora que indicam contexto de agenda
-            date_patterns = [
-                r'\d{1,2}\/\d{1,2}\/\d{4}',  # DD/MM/YYYY
-                r'\d{1,2}\/\d{1,2}',  # DD/MM
-                r'\d{1,2}:\d{2}',  # HH:MM
-                r'às \d{1,2}',  # às X (horas)
-                r'hoje', r'amanhã', r'depois de amanhã',
-                r'segunda', r'terça', r'quarta', r'quinta', r'sexta', r'sábado', r'domingo',
-                r'semana', r'mês', r'ano'
-            ]
-
-            # Verificar se contém palavras-chave de calendário
-            contains_calendar_keywords = any(keyword in normalized_text for keyword in calendar_keywords)
-
-            # Verificar se contém padrões de data/hora
-            contains_date_patterns = any(re.search(pattern, normalized_text) for pattern in date_patterns)
-
-            # Se não há indicação de calendário, retornar None
-            if not (contains_calendar_keywords or contains_date_patterns):
-                return None
-
-            print(f"🗓️ Mensagem relacionada a calendário detectada: {message_content}")
-
-            # Importar GoogleCalendarAIAssistant
-            try:
-                from google_calendar.ai_assistants import GoogleCalendarAIAssistant
-                from django_ai_assistant.helpers.use_cases import create_thread
-            except ImportError as e:
-                print(f"❌ Erro ao importar GoogleCalendarAIAssistant: {e}")
-                return None
-
-            # Criar/obter thread para este usuário
-            whatsapp_number = chat_session.from_number
-            thread_name = f"calendar_{whatsapp_number}"
-
-            try:
-                # Criar nova thread para cada interação (mais simples para implementar)
-                thread = create_thread(name=thread_name, user=None)
-            except Exception as thread_error:
-                print(f"❌ Erro ao criar thread: {thread_error}")
-                return None
-
-            # Criar instância do GoogleCalendarAIAssistant
-            try:
-                calendar_assistant = GoogleCalendarAIAssistant()
-            except Exception as assistant_error:
-                print(f"❌ Erro ao criar GoogleCalendarAIAssistant: {assistant_error}")
-                return None
-
-            # Preparar histórico de mensagens para contexto
-            history_context = ""
-            if last_messages and last_messages.exists():
-                history_context = "\n\nHISTÓRICO DA CONVERSA (últimas mensagens):\n"
-                for msg in last_messages:
-                    user_msg = msg.message.get("content", "")
-                    ai_msg = msg.message.get("response", "")
-                    if user_msg:
-                        history_context += f"Usuário: {user_msg}\n"
-                    if ai_msg:
-                        history_context += f"Assistente: {ai_msg[:100]}...\n"
-
-            # Preparar mensagem contextualizada para a IA de calendário
-            contextualized_message = f"""Usuário WhatsApp {whatsapp_number}: {message_content}
-
-                CONTEXTO IMPORTANTE:
-                - Este usuário está enviando mensagens via WhatsApp
-                - O número do WhatsApp é: {whatsapp_number}
-                - Use sempre este número nas funções que requerem numero_whatsapp
-                - Seja direto e objetivo nas respostas
-                - Formate as respostas de forma amigável para WhatsApp
-                - Se o usuário solicitar criação de eventos, use os dados fornecidos ou peça os dados que faltam
-                - Para listar eventos, seja conciso mas informativo
-                - Para verificar disponibilidade, seja claro sobre conflitos{history_context}"""
-
-            # Processar com a IA de calendário
-            try:
-                ai_response = calendar_assistant.run(contextualized_message, thread_id=thread.id)
-
-                if ai_response and isinstance(ai_response, str) and ai_response.strip():
-                    print(f"✅ Resposta da IA de calendário: {ai_response[:100]}...")
-
-                    # Criar histórico da mensagem
-                    history = ChatHistory.create(
-                        session_id=chat_session.from_number,
-                        content=message_content,
-                        external_id=chat_session.id,
-                        response=ai_response
-                    )
-
-                    return ai_response
-                else:
-                    print("❌ IA de calendário não retornou resposta válida")
-                    return None
-
-            except Exception as run_error:
-                print(f"❌ Erro ao executar IA de calendário: {run_error}")
-                import traceback
-                traceback.print_exc()
-                return None
-
-        except Exception as e:
-            print(f"❌ Erro geral em _try_calendar_assistant: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-
-    def _try_finance_assistant(self, message_content: str, chat_session, last_messages=None):
-        """
-        Verifica se a mensagem é relacionada a finanças e usa FinanceAIAssistant se necessário
-
-        Args:
-            message_content (str): Conteúdo da mensagem
-            chat_session: Sessão do chat
-            last_messages: Últimas mensagens da conversa para contexto
-
-        Returns:
-            str ou None: Resposta da IA de finanças se aplicável, None caso contrário
-        """
-        try:
-            # Normalizar texto para análise
-            import re
-            normalized_text = re.sub(r'\s+', ' ', message_content.lower().strip())
-
-            # Palavras-chave que indicam interesse em finanças
-            finance_keywords = [
-                # Comandos de registro
-                'registrar gasto', 'registrar despesa', 'registrar receita', 'adicionar gasto',
-                'adicionar despesa', 'adicionar receita', 'gastei', 'recebi', 'paguei',
-                'comprei', 'vendi', 'transferi', 'depositei', 'saquei',
-
-                # Comandos de listagem
-                'meus gastos', 'minhas despesas', 'minhas receitas', 'movimentações',
-                'extrato', 'listar gastos', 'listar despesas', 'listar receitas',
-                'ver gastos', 'ver despesas', 'consultar gastos', 'gastos do mês',
-
-                # Comandos de saldo
-                'meu saldo', 'saldo total', 'quanto gastei', 'quanto recebi',
-                'saldo por categoria', 'resumo financeiro', 'balanço', 'total',
-
-                # Palavras relacionadas a dinheiro
-                'dinheiro', 'real', 'reais', 'grana', 'bufunfa', 'valor', 'quantia',
-                'pagamento', 'conta', 'fatura', 'boleto',
-
-                # Categorias comuns
-                'alimentação', 'transporte', 'moradia', 'saúde', 'educação',
-                'lazer', 'compras', 'salário', 'freelance', 'investimento',
-                'mercado', 'supermercado', 'farmácia', 'combustível', 'uber',
-
-                # Comandos de categorias
-                'criar categoria', 'nova categoria', 'categorias', 'segmentar',
-
-                # Palavras financeiras gerais
-                'finança', 'financeiro', 'economia', 'poupar', 'economizar',
-                'orçamento', 'planejamento', 'controle financeiro',
-
-                # Símbolos monetários
-                'r$', 'rs', '$'
-            ]
-
-            # Verificar se a mensagem contém palavras-chave de finanças
-            finance_match = any(keyword in normalized_text for keyword in finance_keywords)
-
-            # Verificar se contém padrões monetários
-            money_patterns = [
-                r'r\$\s*\d+', r'rs\s*\d+', r'\d+\s*reais?', r'\d+\s*real',
-                r'\d+[,\.]\d+', r'gast[ei|ou]', r'pagu[ei|ou]', r'receb[i|eu]'
-            ]
-            money_match = any(re.search(pattern, normalized_text) for pattern in money_patterns)
-
-            if not (finance_match or money_match):
-                return None
-
-            print(f"🔍 Detectada solicitação de finanças: {message_content[:100]}...")
-
-            # Usar django_ai_assistant thread management
-            from django_ai_assistant.models import Thread
-
-            # Buscar ou criar thread para o usuário
-            thread, created = Thread.objects.get_or_create(
-                name=f"finance_thread_{chat_session.from_number}"
-            )
-
-            if created:
-                print(f"🧵 Nova thread de finanças criada: {thread.id}")
-            else:
-                print(f"🧵 Usando thread de finanças existente: {thread.id}")
-
-            # Importar e usar o assistant de finanças
-            from finance.ai_assistants import FinanceAIAssistant
-
-            finance_assistant = FinanceAIAssistant()
-
-            # Preparar mensagem com contexto se disponível
-            contextualized_message = message_content
-
-            if last_messages and last_messages.exists():
-                print(f"💬 Adicionando contexto de {last_messages.count()} mensagens anteriores")
-
-                context_messages = []
-                for msg in last_messages:
-                    if msg.message_content and len(msg.message_content.strip()) > 0:
-                        role = "Usuário" if msg.role == "user" else "Assistente"
-                        context_messages.append(f"{role}: {msg.message_content}")
-
-                if context_messages:
-                    context = "\n".join(context_messages[-5:])  # Últimas 5 mensagens
-                    contextualized_message = f"Contexto da conversa:\n{context}\n\nMensagem atual: {message_content}"
-
-            print(f"💰 Processando mensagem de finanças via FinanceAIAssistant...")
-
-            # Processar com o assistant de finanças
-            ai_response = finance_assistant.run(contextualized_message, thread_id=thread.id)
-
-            print(f"✅ Resposta do assistant de finanças gerada: {len(ai_response)} caracteres")
-
-            # Salvar na conversa
-            if hasattr(chat_session, 'from_number'):
-                ChatHistory.objects.create(
-                    session_id=chat_session.from_number,
-                    role="user",
-                    message_content=message_content
-                )
-
-                ChatHistory.objects.create(
-                    session_id=chat_session.from_number,
-                    role="assistant",
-                    message_content=ai_response,
-                    llm_config=self.llm_config
-                )
-
-            return ai_response
-
-        except ImportError as e:
-            print(f"❌ Erro de importação em _try_finance_assistant: {e}")
-            return None
-        except Exception as e:
-            print(f"❌ Erro geral em _try_finance_assistant: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
 
 
 # Factory function para criar services baseados no provider
-def create_llm_service(llm_config: LLMProviderConfig, use_django_ai_assistant: bool = True):
+def create_llm_service(llm_config: LLMProviderConfig, use_django_ai_assistant: bool = True, user=None):
     """
     Factory function para criar o service apropriado baseado na configuração LLM
 
     Args:
         llm_config: Configuração do LLM
         use_django_ai_assistant: Se deve usar django-ai-assistant (padrão: True)
+        user: Usuário para assistentes especializados (finance, calendar)
 
     Returns:
         Service instance apropriado
     """
     if use_django_ai_assistant:
+        # Verificar se é um assistente especializado
+        if llm_config.config_type == 'finance' and user:
+            from finance.ai_assistants import FinanceAIAssistant
+            return FinanceAIAssistant(user=user, llm_config=llm_config)
+        elif llm_config.config_type == 'calendar' and user:
+            from google_calendar.ai_assistants import GoogleCalendarAIAssistant
+            return GoogleCalendarAIAssistant(user=user, llm_config=llm_config)
+
+        # Assistente genérico
         return AgentLLMService(llm_config)
     else:
         # Fallback para service legado

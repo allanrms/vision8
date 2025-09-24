@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Orbi</title>
-    
+    <title>Login - Vision</title>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -16,37 +16,31 @@
     
     <style>
         :root {
-            --primary-color: #1e40af;
-            --secondary-color: #3730a3;
-            --accent-color: #8b5cf6;
-            --success-color: #059669;
-            --warning-color: #d97706;
-            --danger-color: #dc2626;
+            --white-color: #ffffff;
+            --white-light: #f8f9fa;
+            --gray-light: #e5e7eb;
+            --black-bg: #0a0a0a;
+            --black-surface: #1a1a1a;
+            --black-card: #0f0f0f;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
-            background: linear-gradient(-45deg, #1e40af, #3730a3, #8b5cf6, #06b6d4);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
+            background: var(--black-bg);
             height: 100vh;
             position: relative;
         }
         
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        /* Floating particles animation */
+        /* Decorative elements */
         .particles {
             position: absolute;
             top: 0;
@@ -55,37 +49,38 @@
             height: 100%;
             overflow: hidden;
             z-index: 1;
+            pointer-events: none;
         }
-        
+
         .particle {
             position: absolute;
-            background: rgba(255, 255, 255, 0.1);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent);
             border-radius: 50%;
             animation: float 8s infinite ease-in-out;
         }
-        
-        .particle:nth-child(1) { width: 20px; height: 20px; left: 10%; animation-delay: 0s; }
-        .particle:nth-child(2) { width: 30px; height: 30px; left: 20%; animation-delay: 2s; }
-        .particle:nth-child(3) { width: 25px; height: 25px; left: 30%; animation-delay: 4s; }
-        .particle:nth-child(4) { width: 15px; height: 15px; left: 40%; animation-delay: 6s; }
-        .particle:nth-child(5) { width: 35px; height: 35px; left: 50%; animation-delay: 1s; }
-        .particle:nth-child(6) { width: 20px; height: 20px; left: 60%; animation-delay: 3s; }
-        .particle:nth-child(7) { width: 25px; height: 25px; left: 70%; animation-delay: 5s; }
-        .particle:nth-child(8) { width: 30px; height: 30px; left: 80%; animation-delay: 7s; }
-        .particle:nth-child(9) { width: 15px; height: 15px; left: 90%; animation-delay: 2s; }
-        .particle:nth-child(10) { width: 40px; height: 40px; left: 95%; animation-delay: 4s; }
-        
+
+        .particle:nth-child(1) { width: 60px; height: 60px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 80px; height: 80px; left: 20%; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 50px; height: 50px; left: 30%; animation-delay: 4s; }
+        .particle:nth-child(4) { width: 40px; height: 40px; left: 40%; animation-delay: 6s; }
+        .particle:nth-child(5) { width: 100px; height: 100px; left: 50%; animation-delay: 1s; }
+        .particle:nth-child(6) { width: 70px; height: 70px; left: 60%; animation-delay: 3s; }
+        .particle:nth-child(7) { width: 55px; height: 55px; left: 70%; animation-delay: 5s; }
+        .particle:nth-child(8) { width: 90px; height: 90px; left: 80%; animation-delay: 7s; }
+        .particle:nth-child(9) { width: 45px; height: 45px; left: 90%; animation-delay: 2s; }
+        .particle:nth-child(10) { width: 110px; height: 110px; left: 95%; animation-delay: 4s; }
+
         @keyframes float {
-            0%, 100% { 
-                transform: translateY(100vh) rotate(0deg); 
-                opacity: 0; 
+            0%, 100% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
             }
-            10%, 90% { 
-                opacity: 0.8; 
+            10%, 90% {
+                opacity: 0.3;
             }
-            50% { 
-                transform: translateY(-100px) rotate(180deg); 
-                opacity: 1; 
+            50% {
+                transform: translateY(-100px) rotate(180deg);
+                opacity: 0.5;
             }
         }
         
@@ -101,14 +96,13 @@
         }
         
         .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--black-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
             padding: 3rem;
-            box-shadow: 
-                0 25px 50px -12px rgba(0, 0, 0, 0.25),
-                0 0 0 1px rgba(255, 255, 255, 0.1);
+            box-shadow:
+                0 0 60px rgba(255, 255, 255, 0.05),
+                0 20px 40px rgba(0, 0, 0, 0.5);
             width: 100%;
             max-width: 450px;
             transform: translateY(0);
@@ -134,44 +128,41 @@
         .logo-icon {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            background: white;
             border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1rem;
-            box-shadow: 0 8px 32px rgba(30, 64, 175, 0.3);
+            box-shadow: 0 8px 32px rgba(255, 255, 255, 0.2);
             animation: pulse 2s infinite;
         }
-        
+
         @keyframes pulse {
             0%, 100% {
                 transform: scale(1);
-                box-shadow: 0 8px 32px rgba(30, 64, 175, 0.3);
+                box-shadow: 0 8px 32px rgba(255, 255, 255, 0.2);
             }
             50% {
                 transform: scale(1.05);
-                box-shadow: 0 12px 40px rgba(30, 64, 175, 0.5);
+                box-shadow: 0 12px 40px rgba(255, 255, 255, 0.3);
             }
         }
-        
+
         .logo-icon i {
             font-size: 2.5rem;
-            color: white;
+            color: var(--black-bg);
         }
-        
+
         .brand-title {
             font-size: 2.5rem;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: white;
             margin-bottom: 0.5rem;
         }
-        
+
         .brand-subtitle {
-            color: #64748b;
+            color: #9ca3af;
             font-weight: 500;
         }
         
@@ -181,24 +172,25 @@
         }
         
         .form-floating input {
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid rgba(30, 64, 175, 0.1);
+            background: var(--black-surface);
+            border: 2px solid rgba(255, 255, 255, 0.15);
             border-radius: 16px;
             padding: 1.2rem 1rem 0.8rem;
             font-size: 1rem;
+            color: #e5e7eb;
             transition: all 0.3s ease;
         }
-        
+
         .form-floating input:focus {
-            background: white;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+            background: var(--black-surface);
+            border-color: white;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
             outline: none;
         }
-        
+
         .form-floating label {
             padding: 1rem 1rem 0.8rem;
-            color: #64748b;
+            color: #9ca3af;
             font-weight: 500;
         }
         
@@ -207,28 +199,28 @@
             right: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #64748b;
+            color: white;
             font-size: 1.2rem;
             z-index: 5;
         }
-        
+
         .login-btn {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            background: white;
             border: none;
             border-radius: 16px;
             padding: 1rem 2rem;
             font-size: 1.1rem;
             font-weight: 600;
-            color: white;
+            color: var(--black-bg);
             width: 100%;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
-        
+
         .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(30, 64, 175, 0.4);
+            box-shadow: 0 12px 40px rgba(255, 255, 255, 0.3);
         }
         
         .login-btn:active {
@@ -242,38 +234,41 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
             transition: left 0.5s;
         }
-        
+
         .login-btn:hover::before {
             left: 100%;
         }
-        
+
         .security-badge {
             text-align: center;
             margin-top: 2rem;
             padding: 1rem;
-            background: rgba(5, 150, 105, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            color: var(--success-color);
+            color: #d1d5db;
             font-weight: 500;
         }
-        
+
         .alert {
             border-radius: 12px;
             border: none;
             margin-bottom: 1.5rem;
         }
-        
+
         .alert-danger {
-            background: rgba(220, 38, 38, 0.1);
-            color: var(--danger-color);
+            background: rgba(220, 38, 38, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(220, 38, 38, 0.3);
         }
-        
+
         .alert-success {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--success-color);
+            background: rgba(5, 150, 105, 0.2);
+            color: #6ee7b7;
+            border: 1px solid rgba(5, 150, 105, 0.3);
         }
         
         /* Loading animation */
@@ -343,10 +338,10 @@
             <!-- Logo and branding -->
             <div class="logo-container">
                 <div class="logo-icon">
-                    <i class="bi bi-eye-fill"></i>
+                    <i class="bi bi-cash-coin"></i>
                 </div>
-                <h1 class="brand-title">Orbi</h1>
-                <p class="brand-subtitle">Seu Assistente Inteligente no WhatsApp</p>
+                <h1 class="brand-title">Vision</h1>
+                <p class="brand-subtitle">Seu Assistente Financeiro Inteligente</p>
             </div>
             
             <!-- Messages -->

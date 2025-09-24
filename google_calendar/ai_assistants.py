@@ -1,7 +1,11 @@
 import traceback
 from django.utils import timezone
+from django.conf import settings
 from django_ai_assistant import AIAssistant, method_tool
 from datetime import datetime, timedelta
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from .services import GoogleCalendarService
 
 
@@ -21,10 +25,70 @@ class GoogleCalendarAIAssistant(AIAssistant):
 
     Quando listar eventos, formate as informações de forma clara e legível.
     Quando criar eventos, confirme os detalhes com o usuário antes de criar.
-    
+
     Ao solicitar criar evento não necessita pedir confirmação, epenas crie o evento.
     Para limpar a agenda de uma data específica, utilize listar_eventos_calendar para obter os eventos e, em seguida, delete todos os eventos daquele dia    """
     model = "gpt-4o-mini"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._user = kwargs.get('user')
+        self._llm_config = kwargs.get('llm_config')
+
+        # Sobrescrever configurações se llm_config for fornecido
+        if self._llm_config:
+            self.name = self._llm_config.display_name or "Assistente de Google Calendar"
+            self.model = self._llm_config.model
+            if self._llm_config.instructions:
+                self.instructions = self._llm_config.instructions
+
+    def get_llm(self):
+        """Retorna o modelo LLM configurado baseado no LLMProviderConfig"""
+        if not self._llm_config:
+            # Fallback para configuração padrão
+            return ChatOpenAI(
+                model=self.model,
+                temperature=0.7,
+                max_tokens=1024,
+                openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
+            )
+
+        provider = self._llm_config.name
+
+        if provider == "openai":
+            return ChatOpenAI(
+                model=self._llm_config.model,
+                temperature=self._llm_config.temperature,
+                max_tokens=self._llm_config.max_tokens,
+                top_p=self._llm_config.top_p,
+                presence_penalty=self._llm_config.presence_penalty,
+                frequency_penalty=self._llm_config.frequency_penalty,
+                openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
+            )
+        elif provider == "anthropic":
+            return ChatAnthropic(
+                model=self._llm_config.model,
+                temperature=self._llm_config.temperature,
+                max_tokens=self._llm_config.max_tokens,
+                top_p=self._llm_config.top_p,
+                anthropic_api_key=getattr(settings, 'ANTHROPIC_API_KEY', '')
+            )
+        elif provider == "google":
+            return ChatGoogleGenerativeAI(
+                model=self._llm_config.model,
+                temperature=self._llm_config.temperature,
+                max_output_tokens=self._llm_config.max_tokens,
+                top_p=self._llm_config.top_p,
+                google_api_key=getattr(settings, 'GOOGLE_API_KEY', '')
+            )
+        else:
+            # Fallback para OpenAI se provider não reconhecido
+            return ChatOpenAI(
+                model=self._llm_config.model,
+                temperature=self._llm_config.temperature,
+                max_tokens=self._llm_config.max_tokens,
+                openai_api_key=getattr(settings, 'OPENAI_API_KEY', '')
+            )
 
     def get_instructions(self):
         return f"{self.instructions}\n\nData e hora atual: {timezone.now().strftime('%d/%m/%Y %H:%M')}"

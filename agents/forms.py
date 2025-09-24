@@ -10,7 +10,7 @@ class AssistantForm(forms.ModelForm):
     
     class Meta:
         model = LLMProviderConfig
-        fields = ['display_name', 'name', 'model', 'instructions', 'temperature', 'max_tokens', 
+        fields = ['display_name', 'name', 'model', 'config_type', 'instructions', 'temperature', 'max_tokens',
                   'top_p', 'presence_penalty', 'frequency_penalty']
         widgets = {
             'display_name': forms.TextInput(attrs={
@@ -23,6 +23,9 @@ class AssistantForm(forms.ModelForm):
             'model': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'ex: gpt-4o-mini, gpt-3.5-turbo, gpt-4, claude-3-sonnet'
+            }),
+            'config_type': forms.Select(attrs={
+                'class': 'form-select'
             }),
             'instructions': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -63,6 +66,7 @@ class AssistantForm(forms.ModelForm):
             'display_name': 'Nome do Assistant',
             'name': 'Provedor de IA',
             'model': 'Modelo',
+            'config_type': 'Tipo de Configuração',
             'instructions': 'Instruções do Assistant',
             'temperature': 'Temperatura',
             'max_tokens': 'Máximo de Tokens',
@@ -74,6 +78,7 @@ class AssistantForm(forms.ModelForm):
             'display_name': 'Nome personalizado para identificar este assistant (ex: "Suporte Técnico", "Vendedor Expert")',
             'name': 'Escolha o provedor de IA (OpenAI, Anthropic, etc)',
             'model': 'Nome específico do modelo (ex: gpt-4o-mini, gpt-3.5-turbo)',
+            'config_type': 'Define o contexto de uso: Financeiro (controle de finanças), Agenda (calendário), ou Geral',
             'instructions': 'Defina a personalidade, comportamento e regras do seu assistant. Use frases claras e específicas.',
             'temperature': 'Controla criatividade (0.0 = conservador, 2.0 = criativo)',
             'max_tokens': 'Limite máximo de tokens na resposta',

@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from decimal import Decimal
 from django.db.models import Sum, Q
+from django.core.paginator import Paginator
 from .models import Movement, Category
 from authentication.decorators import finance_required
 import json
@@ -148,6 +149,14 @@ def dashboard(request):
     # Calcular número de dias do período
     period_days = (end_date - start_date).days + 1
 
+    # Obter todas as movimentações do período ordenadas por data
+    all_movements = movements.select_related('category').order_by('-date', '-created_at')
+
+    # Paginação
+    page = request.GET.get('page', 1)
+    paginator = Paginator(all_movements, 15)  # 15 transações por página
+    paginated_movements = paginator.get_page(page)
+
     context = {
         'start_date': start_date,
         'end_date': end_date,
@@ -157,6 +166,7 @@ def dashboard(request):
         'balance': balance,
         'expenses_by_category': expenses_by_category,
         'income_by_category': income_by_category,
+        'all_movements': paginated_movements,
         'bar_labels': bar_labels,
         'bar_income': bar_income,
         'bar_expenses': bar_expenses,

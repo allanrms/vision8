@@ -358,19 +358,20 @@ class EvolutionWebhookView(APIView):
 
 Sua conta foi criada com sucesso! 
 
-📊 Seu perfil já está configurado com mais de 60 categorias financeiras prontas para uso!
+📊 Seu perfil já está configurado com mais de 60 categorias financeiras prontas para uso.
 
 💬 *Como usar:*
-• Envie suas despesas ou receitas diretamente por mensagem ou áudio.
-• Exemplo: "Gastei R$ 50 no supermercado"
-• Exemplo: "Recebi R$ 1.200 de salário"
-• "Mostrar meus gastos do mês"
-• "Qual meu saldo por categoria?"
+• Você pode interagir diretamente por mensagem ou áudio aqui no WhatsApp:
+• Exemplo de despesa: "Gastei R$ 50 no supermercado"
+• Exemplo de receita: "Recebi R$ 1.200 de salário"
+• Perguntas sobre seus gastos: "Mostrar meus gastos do mês"
+• Consultar saldo por categoria: "Qual meu saldo por categoria?"
 • Solicite análises personalizadas dos seus gastos e receitas.
-• Você também pode enviar áudios, e eu registro tudo para você.
+• Envie áudios e a IA registra tudo para você automaticamente.
 
 
-Aqui estão suas credenciais de acesso, caso queira acompanhar tudo em um dashboard:
+💻 Dashboard opcional:
+Se quiser acompanhar suas finanças de forma visual, você também pode acessar seu dashboard através do link abaixo:
 
 👤 *Login:* {user_whatsapp_contact.username}
 🔐 *Senha:* {password}

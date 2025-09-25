@@ -11,6 +11,10 @@
             width: 100%;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         .finance-header {
             background: #fff;
             padding: 1.5rem 0;
@@ -419,6 +423,189 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             margin-top: 1.5rem;
         }
+
+        .transactions-table {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-top: 1.5rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .transactions-list {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .transactions-list th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .transactions-list td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.875rem;
+        }
+
+        .transactions-list tr:last-child td {
+            border-bottom: none;
+        }
+
+        .transactions-list tr:hover {
+            background: #f8fafc;
+        }
+
+        .transaction-date {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .transaction-description {
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .transaction-category {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .transaction-category-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .transaction-category-name {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+
+        .transaction-amount {
+            font-weight: 600;
+        }
+
+        .transaction-amount.income {
+            color: #10b981;
+        }
+
+        .transaction-amount.expense {
+            color: #ef4444;
+        }
+
+        .transaction-type {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .transaction-type.income {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .transaction-type.expense {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            .transactions-table {
+                padding: 1rem;
+            }
+
+            .transactions-list th,
+            .transactions-list td {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .transaction-category-name {
+                display: none;
+            }
+        }
+
+        .pagination-wrapper {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pagination-info {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-right: 1rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #475569;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover {
+            background: #f1f5f9;
+            border-color: #667eea;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .pagination-btn.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .pagination-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.disabled:hover {
+            background: white;
+            border-color: #e2e8f0;
+            color: #475569;
+        }
+
+        @media (max-width: 768px) {
+            .pagination-wrapper {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .pagination-info {
+                margin-right: 0;
+                text-align: center;
+            }
+        }
 </style>
 {% endblock %}
 
@@ -512,7 +699,7 @@
             </div>
         </div>
 
-        <div class="bottom-grid">
+        <div class="bottom-grid" style="margin-top: 1.5rem;">
             <div class="expenses-card">
                 <div class="expenses-header">
                     <div class="chart-title">Receitas</div>
@@ -554,6 +741,91 @@
             <div class="chart-container">
                 <canvas id="movementChart"></canvas>
             </div>
+        </div>
+
+        <div class="transactions-table" id="transactions-section">
+            <div class="chart-header">
+                <div class="chart-title">Todas as Movimentações do Período</div>
+            </div>
+            <div class="table-responsive">
+                {% if all_movements %}
+                <table class="transactions-list">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in all_movements %}
+                        <tr>
+                            <td>
+                                <div class="transaction-date">{{ movement.date|date:"d/m/Y" }}</div>
+                            </td>
+                            <td>
+                                <div class="transaction-description">{{ movement.description }}</div>
+                            </td>
+                            <td>
+                                <div class="transaction-category">
+                                    <div class="transaction-category-color" style="background-color: {{ movement.category.color }}"></div>
+                                    <span class="transaction-category-name">{{ movement.category.name }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="transaction-type {{ movement.type }}">
+                                    {% if movement.type == 'income' %}Receita{% else %}Despesa{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="transaction-amount {{ movement.type }}">
+                                    {% if movement.type == 'income' %}+{% else %}-{% endif %}R$ {{ movement.amount|floatformat:2|intcomma }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma movimentação registrada no período selecionado</p>
+                {% endif %}
+            </div>
+
+            {% if all_movements.paginator.num_pages > 1 %}
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    Mostrando {{ all_movements.start_index }}-{{ all_movements.end_index }} de {{ all_movements.paginator.count }} movimentações
+                </div>
+
+                <div class="pagination-controls">
+                    {% if all_movements.has_previous %}
+                        <a href="?{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}page={{ all_movements.previous_page_number }}#transactions-section" class="pagination-btn">‹ Anterior</a>
+                    {% else %}
+                        <span class="pagination-btn disabled">‹ Anterior</span>
+                    {% endif %}
+
+                    {% for num in all_movements.paginator.page_range %}
+                        {% if num == all_movements.number %}
+                            <span class="pagination-btn active">{{ num }}</span>
+                        {% elif num|add:'-3' <= all_movements.number <= num|add:'3' %}
+                            <a href="?{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}page={{ num }}#transactions-section" class="pagination-btn">{{ num }}</a>
+                        {% elif num == 1 or num == all_movements.paginator.num_pages %}
+                            <a href="?{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}page={{ num }}#transactions-section" class="pagination-btn">{{ num }}</a>
+                        {% elif num|add:'-4' == all_movements.number or num|add:'4' == all_movements.number %}
+                            <span class="pagination-btn disabled">…</span>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if all_movements.has_next %}
+                        <a href="?{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}page={{ all_movements.next_page_number }}#transactions-section" class="pagination-btn">Próximo ›</a>
+                    {% else %}
+                        <span class="pagination-btn disabled">Próximo ›</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -983,6 +1255,30 @@
                     }
                 }
             }
+        });
+
+        // Scroll suave para a tabela após mudança de página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Se a URL contém a âncora da tabela, fazer scroll suave
+            if (window.location.hash === '#transactions-section') {
+                setTimeout(function() {
+                    const element = document.getElementById('transactions-section');
+                    if (element) {
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                }, 100); // Pequeno delay para garantir que a página carregou completamente
+            }
+
+            // Adicionar evento de clique aos botões de paginação para scroll suave
+            const paginationBtns = document.querySelectorAll('.pagination-btn[href*="#transactions-section"]');
+            paginationBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    // Permitir que o link funcione normalmente, o scroll será feito após o carregamento
+                });
+            });
         });
 </script>
 {% endblock %}

@@ -163,7 +163,7 @@ def dashboard(request):
         payment_methods_data.append({
             'name': exp['payment_method__name'],
             'total': float(exp['total']),  # Converter para float para JSON
-            'percentage': percentage
+            'percentage': float(percentage)
         })
 
     # Serializar dados dos métodos de pagamento para JavaScript

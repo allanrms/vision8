@@ -1,3 +1,5 @@
+import traceback
+
 import requests
 import threading
 from django.conf import settings
@@ -48,14 +50,16 @@ def _configure_webhook_async(instance_pk, instance_name_for_log):
             'Content-Type': 'application/json'
         }
         data = {
+            "webhook": {
             'url': webhook_url,
             'enabled': True,
-            'events': ['MESSAGES_UPSERT']
+            'events': ["MESSAGES_UPSERT"]
+            }
         }
-        
+
         # Primeiro verificar se a instância existe na Evolution API usando endpoint mais específico
         check_url = f"{instance.base_url}/instance/connectionState/{instance.instance_name}"
-        print(f"🔍 Verificando se instância '{instance.instance_name}' existe na Evolution API...")
+        print(f"🔍 Verificando se instância '{check_url}' existe na Evolution API..." )
 
         check_response = requests.get(check_url, headers={'apikey': instance.api_key}, timeout=30)
 
@@ -105,6 +109,7 @@ def auto_configure_webhook(sender, instance, created, **kwargs):
         thread.start()
         print(f"🚀 Iniciando configuração automática de webhook para '{instance.name}' em background...")
     else:
+        traceback.print_exc()
         print(f"⚠️ Signal executado para '{instance.name}' mas condições não atendidas:")
         print(f"   created={created}, base_url={bool(instance.base_url)}, api_key={bool(instance.api_key)}, instance_name={bool(instance.instance_name)}")
 

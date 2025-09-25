@@ -8,17 +8,17 @@ class EvolutionInstanceAdmin(admin.ModelAdmin):
     """
     Admin para gerenciar instâncias Evolution API
     """
-    list_display = ['name', 'instance_name', 'owner', 'status_badge', 'connection_info',
+    list_display = ['name', 'instance_name', 'instance_evolution_id_display', 'owner', 'status_badge', 'connection_info',
                     'llm_config_display', 'is_active', 'created_at', 'last_connection']
     list_filter = ['status', 'is_active', 'owner', 'llm_config', 'created_at']
-    search_fields = ['name', 'instance_name', 'phone_number', 'profile_name', 'owner__username']
+    search_fields = ['name', 'instance_name', 'instance_evolution_id', 'phone_number', 'profile_name', 'owner__username']
     readonly_fields = ['created_at', 'updated_at', 'last_connection']
     fieldsets = (
         ('Informações Básicas', {
-            'fields': ('name', 'instance_name', 'owner', 'is_active')
+            'fields': ('name', 'instance_name', 'instance_evolution_id', 'owner', 'is_active')
         }),
         ('Configuração Evolution API', {
-            'fields': ('webhook_url',)
+            'fields': ('base_url', 'api_key', 'webhook_url')
         }),
         ('Configuração de IA', {
             'fields': ('llm_config',)
@@ -52,6 +52,23 @@ class EvolutionInstanceAdmin(admin.ModelAdmin):
         return obj.connection_info
     connection_info.short_description = 'Conexão'
     
+    def instance_evolution_id_display(self, obj):
+        """Exibe ID da instância Evolution truncado"""
+        if obj.instance_evolution_id:
+            # Mostrar apenas os primeiros 8 caracteres + ... se for maior
+            instance_id = obj.instance_evolution_id
+            if len(instance_id) > 12:
+                display_id = instance_id[:8] + '...'
+            else:
+                display_id = instance_id
+            return format_html(
+                '<span title="{}" class="badge bg-secondary" style="font-family: monospace;">{}</span>',
+                instance_id,  # ID completo no tooltip
+                display_id    # ID truncado na exibição
+            )
+        return format_html('<span class="text-muted">-</span>')
+    instance_evolution_id_display.short_description = 'Evolution ID'
+
     def llm_config_display(self, obj):
         """Exibe configuração LLM formatada"""
         if obj.llm_config:

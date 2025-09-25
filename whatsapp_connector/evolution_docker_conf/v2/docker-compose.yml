@@ -1,7 +1,8 @@
+version: '3.9'
 services:
   evolution-api:
     container_name: evolution_api
-    image: atendai/evolution-api:v
+    image: evoapicloud/evolution-api:latest
     restart: always
     ports:
       - "8081:8080"

@@ -4,11 +4,20 @@ import requests
 from django.conf import settings
 
 
-def clean_number_whatsapp(number):
+def clean_number_whatsapp(number: str) -> str:
     try:
-        return number.replace("@s.whatsapp.net", "").replace("@c.us", "")
-    except:
+        if not number:
+            return ""
+        # remover sufixos comuns de JID
+        for suffix in ["@s.whatsapp.net", "@c.us", "@lid", "@g.us"]:
+            if number.endswith(suffix):
+                number = number.replace(suffix, "")
+        # manter apenas dígitos
+        number = "".join(filter(str.isdigit, number))
+        return number
+    except Exception:
         traceback.print_exc()
+        return ""
 
 def transcribe_audio_from_bytes(audio_bytes: bytes, language="pt-BR") -> str:
     """

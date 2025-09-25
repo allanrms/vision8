@@ -1,3 +1,4 @@
+import traceback
 from datetime import datetime
 from typing import Tuple
 
@@ -127,11 +128,19 @@ class EvolutionWebhookView(APIView):
                 result = self._send_response_to_whatsapp(evolution_api, message_history.chat_session.from_number, response_msg)
 
                 # Atualizar o MessageHistory com a resposta
-                if result:
+                if result and not isinstance(result, dict):
+                    # Resposta enviada com sucesso
                     message_history.response = response_msg
                     message_history.processing_status = 'completed'
                     message_history.save()
                     print(f"✅ Resposta enviada e salva para mensagem {message_history.message_id}")
+                elif isinstance(result, dict) and result.get('error') == 'number_not_exists':
+                    # Número não tem WhatsApp
+                    message_history.processing_status = 'failed'
+                    message_history.response = f"❌ Número {result.get('number')} não tem WhatsApp"
+                    message_history.save()
+                    print(f"⚠️ Número {result.get('number')} não tem WhatsApp - mensagem não enviada")
+                    result = True  # Considerar como sucesso pois foi processado corretamente
                 else:
                     message_history.processing_status = 'failed'
                     message_history.save()
@@ -158,6 +167,7 @@ class EvolutionWebhookView(APIView):
 
         except Exception as e:
             print(f"Error processing webhook: {e}")
+            traceback.print_exc()
             return Response(
                 {'error': 'Internal server error'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -171,6 +181,8 @@ class EvolutionWebhookView(APIView):
         """Extract message data from webhook payload - integrated with orbi logic"""
         try:
             data = webhook_data.get('data', {})
+
+            print(data)
             
             if not data:
                 return None
@@ -344,19 +356,25 @@ class EvolutionWebhookView(APIView):
 
                 welcome_msg = f"""🎉 *Bem-vindo ao nosso sistema de gestão financeira!*
 
-Sua conta foi criada com sucesso! Aqui estão suas credenciais de acesso:
-
-👤 *Login:* {user_whatsapp_contact.username}
-🔐 *Senha:* {password}
-🌐 *Acesse:* {dashboard_url}
+Sua conta foi criada com sucesso! 
 
 📊 Seu perfil já está configurado com mais de 60 categorias financeiras prontas para uso!
 
 💬 *Como usar:*
-• Envie mensagens sobre suas despesas e receitas
+• Envie suas despesas ou receitas diretamente por mensagem ou áudio.
 • Exemplo: "Gastei R$ 50 no supermercado"
-• Consulte suas finanças quando quiser
-• Peça relatórios e análises dos seus gastos
+• Exemplo: "Recebi R$ 1.200 de salário"
+• "Mostrar meus gastos do mês"
+• "Qual meu saldo por categoria?"
+• Solicite análises personalizadas dos seus gastos e receitas.
+• Você também pode enviar áudios, e eu registro tudo para você.
+
+
+Aqui estão suas credenciais de acesso, caso queira acompanhar tudo em um dashboard:
+
+👤 *Login:* {user_whatsapp_contact.username}
+🔐 *Senha:* {password}
+🌐 *Acesse:* {dashboard_url}
 
 💡 *Dica:* Guarde suas credenciais em um local seguro. Você pode usar o sistema via WhatsApp ou acessar o dashboard pelo link acima."""
 
@@ -552,19 +570,27 @@ Sua conta foi criada com sucesso! Aqui estão suas credenciais de acesso:
 
     def _get_evolution_instance(self, message_data):
         """
-        Busca a instância Evolution baseada no owner da mensagem
+        Busca a instância Evolution baseada no instanceId da mensagem
         """
-        owner = message_data.get('raw_data', {}).get('owner')
+        raw_data = message_data.get('raw_data', {})
+        instance_id = raw_data.get('instanceId')
+        owner = raw_data.get('owner')
+
         evolution_instance = None
-        
-        if owner:
+
+        # Primeiro tentar por instanceId
+        if instance_id:
             try:
-                evolution_instance = EvolutionInstance.objects.get(instance_name=owner)
-                print(f"✅ Instância encontrada: {evolution_instance.name} (owner: {owner})")
-            except EvolutionInstance.DoesNotExist:
-                print(f"❌ Instância não encontrada para owner: {owner}")
-        else:
-            print("⚠️ Owner não encontrado na mensagem")
+                # Buscar por algum campo que corresponda ao instanceId
+                # Como não temos um campo instanceId no modelo, vamos usar uma abordagem diferente
+                print(f"🔍 Buscando instância por instanceId: {instance_id}")
+
+                # Buscar todas as instâncias e verificar via API qual corresponde ao instanceId
+                evolution_instance = EvolutionInstance.objects.get(instance_evolution_id=instance_id)
+
+            except Exception as e:
+                print(f"❌ Erro ao buscar instância por instanceId: {e}")
+
 
         return evolution_instance
     
@@ -579,7 +605,7 @@ Sua conta foi criada com sucesso! Aqui estão suas credenciais de acesso:
         message_content = message_history.content.strip().lower() if message_history.content else ""
         evolution_api = EvolutionAPIService(evolution_instance)
 
-        print(f'sender_number {sender_number} {evolution_instance.phone_number}')
+        print(f'sender_number {sender_number} evolution_instance.phone_number {evolution_instance.phone_number}')
 
         # sender_number 558396194249 558399330465
         # sender_number 558396194249 558399330465

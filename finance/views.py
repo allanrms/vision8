@@ -54,6 +54,21 @@ def dashboard(request):
             'percentage': percentage
         })
 
+    # Receitas por categoria
+    income_by_cat = movements.filter(type='income').values(
+        'category__name', 'category__color'
+    ).annotate(total=Sum('amount')).order_by('-total')
+
+    income_by_category = []
+    for inc in income_by_cat:
+        percentage = (inc['total'] / total_income * 100) if total_income > 0 else 0
+        income_by_category.append({
+            'name': inc['category__name'],
+            'color': inc['category__color'],
+            'total': inc['total'],
+            'percentage': percentage
+        })
+
     # Agrupar dados diários (apenas dias com movimentação)
     daily_movements = movements.values('date', 'type').annotate(
         total=Sum('amount')
@@ -126,6 +141,10 @@ def dashboard(request):
     expense_values = json.dumps([float(cat['total']) for cat in expenses_by_category])
     expense_colors = json.dumps([cat['color'] for cat in expenses_by_category])
 
+    income_labels = json.dumps([cat['name'] for cat in income_by_category])
+    income_values = json.dumps([float(cat['total']) for cat in income_by_category])
+    income_colors = json.dumps([cat['color'] for cat in income_by_category])
+
     # Calcular número de dias do período
     period_days = (end_date - start_date).days + 1
 
@@ -137,6 +156,7 @@ def dashboard(request):
         'total_expenses': total_expenses,
         'balance': balance,
         'expenses_by_category': expenses_by_category,
+        'income_by_category': income_by_category,
         'bar_labels': bar_labels,
         'bar_income': bar_income,
         'bar_expenses': bar_expenses,
@@ -148,6 +168,9 @@ def dashboard(request):
         'expense_labels': expense_labels,
         'expense_values': expense_values,
         'expense_colors': expense_colors,
+        'income_labels': income_labels,
+        'income_values': income_values,
+        'income_colors': income_colors,
     }
 
     return render(request, 'finance/dashboard.html', context)

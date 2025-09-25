@@ -1,3 +1,5 @@
+import traceback
+
 import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -209,7 +211,12 @@ class InstanceCreateView(LoginRequiredMixin, CreateView):
                 'instanceName': self.object.instance_name,
                 'webhook': self.object.webhook_url or '',
                 'webhookByEvents': False,
-                'websocket': False
+                'websocket': False,
+                "groupsIgnore": True,
+                "alwaysOnline": True,
+                "readMessages": True,
+                "readStatus": True,
+                "integration": "WHATSAPP-BAILEYS"
             }
             
             response = requests.post(url, json=data, headers=headers, timeout=30)
@@ -627,6 +634,7 @@ def instance_status(request, pk):
         })
         
     except Exception as e:
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)

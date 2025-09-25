@@ -98,7 +98,7 @@ class FinanceAIAssistant(AIAssistant):
             )
 
     @method_tool
-    def listar_movimentacoes(self, limite: int = 10, tipo: str = "", categoria: str = "", data_inicial: str = "", data_final: str = "") -> str:
+    def listar_movimentacoes(self, limite: int = 500, tipo: str = "", categoria: str = "", data_inicial: str = "", data_final: str = "") -> str:
         """Lista as movimentações financeiras
 
         Args:
@@ -123,6 +123,7 @@ class FinanceAIAssistant(AIAssistant):
                 queryset = queryset.filter(category__name__icontains=categoria)
 
             # Filtrar por período (data do movimento, não data de criação)
+            print(f'data_inicial: {data_inicial}')
             if data_inicial:
                 try:
                     data_inicio = datetime.strptime(data_inicial, '%d/%m/%Y').date()
@@ -130,6 +131,7 @@ class FinanceAIAssistant(AIAssistant):
                 except ValueError:
                     return "❌ Formato de data inicial inválido. Use DD/MM/YYYY (ex: 25/12/2024)"
 
+            print(f'data_final: {data_final}')
             if data_final:
                 try:
                     data_fim = datetime.strptime(data_final, '%d/%m/%Y').date()

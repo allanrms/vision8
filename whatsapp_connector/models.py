@@ -1,3 +1,5 @@
+import traceback
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
@@ -20,6 +22,7 @@ class EvolutionInstance(BaseUUIDModel, HistoryBaseModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField('Nome da Instância', max_length=100, unique=True)
+    instance_evolution_id = models.CharField('Id da Instância no Evolution API', max_length=100, unique=True)
     instance_name = models.CharField('Nome no Evolution API', max_length=100, unique=True)
     base_url = models.URLField('URL Base do Evolution API')
     api_key = models.CharField('Chave da API', max_length=255)
@@ -104,65 +107,97 @@ class EvolutionInstance(BaseUUIDModel, HistoryBaseModel):
         """
         Busca e atualiza informações da instância conectada via Evolution API
         """
-        if not self.is_connected:
-            return False
-        
         try:
             import requests
-            
+
             headers = {'apikey': self.api_key}
             updated = False
-            
+
             # Endpoint principal para buscar informações da instância
             url = f"{self.base_url}/instance/fetchInstances"
             response = requests.get(url, headers=headers, timeout=15)
-            
+
+            print(f'fetch_and_update_connection_info {response.json()}')
+
             if response.status_code == 200:
                 data = response.json()
-                
+
                 # Procurar a instância específica na lista
                 instance_info = None
                 if isinstance(data, list):
                     for item in data:
-                        if item.get('instance', {}).get('instanceName') == self.instance_name:
-                            instance_info = item.get('instance', {})
+                        # Novo formato da API - objetos diretamente no array
+                        if item.get('name') == self.instance_name:
+                            instance_info = item
                             break
-                
+
                 if instance_info:
-                    # Extrair informações principais
-                    owner_info = instance_info.get('owner', '')
+                    # Extrair informações do novo formato da API
+                    owner_jid = instance_info.get('ownerJid', '')
                     profile_name = instance_info.get('profileName', '')
-                    profile_pic_url = instance_info.get('profilePictureUrl')
-                    profile_status = instance_info.get('profileStatus', '')
-                    
-                    # Capturar número da conta (owner é o formato completo)
-                    if owner_info and '@s.whatsapp.net' in owner_info:
-                        phone_number = owner_info.replace('@s.whatsapp.net', '')
+                    profile_pic_url = instance_info.get('profilePicUrl')
+                    api_status = instance_info.get('connectionStatus', '')
+
+                    # Pegar instance_evolution_id do Setting
+                    setting_info = instance_info.get('Setting', {})
+                    instance_evolution_id = setting_info.get('instanceId', '')
+
+                    # Atualizar instance_evolution_id se for diferente
+                    if instance_evolution_id and instance_evolution_id != self.instance_evolution_id:
+                        self.instance_evolution_id = instance_evolution_id
+                        updated = True
+                        print(f"🆔 Instance evolution ID updated: {instance_evolution_id}")
+
+                    # Capturar número da conta (ownerJid é o formato completo)
+                    if owner_jid and '@s.whatsapp.net' in owner_jid:
+                        phone_number = owner_jid.replace('@s.whatsapp.net', '')
                         if phone_number != self.phone_number:
                             self.phone_number = phone_number
                             updated = True
-                    
+                            print(f"📱 Phone number updated: {phone_number}")
+
                     # Atualizar informações do perfil
                     if profile_name and profile_name != self.profile_name:
                         self.profile_name = profile_name
                         updated = True
-                    
+                        print(f"👤 Profile name updated: {profile_name}")
+
                     if profile_pic_url and profile_pic_url != self.profile_pic_url:
                         self.profile_pic_url = profile_pic_url
                         updated = True
-                    
+                        print(f"📸 Profile pic updated: {profile_pic_url}")
+
+                    # Mapear status da API para nosso modelo
+                    status_mapping = {
+                        'open': 'connected',
+                        'connecting': 'connecting',
+                        'close': 'disconnected',
+                        'closed': 'disconnected'
+                    }
+                    new_status = status_mapping.get(api_status, self.status)
+                    if new_status != self.status:
+                        self.status = new_status
+                        updated = True
+                        print(f"🔄 Status updated: {api_status} -> {new_status}")
+
                     # Atualizar última conexão
                     self.last_connection = timezone.now()
                     updated = True
-                    
+
                     if updated:
                         self.save()
-                        print(f"Updated connection info for instance {self.name}: {owner_info}")
+                        print(f"✅ Updated connection info for instance {self.name}: {owner_jid} (status: {api_status})")
                         return True
-                        
+                else:
+                    print(f"⚠️ Instance {self.instance_name} not found in API response")
+                    # Debug: mostrar nomes disponíveis
+                    available_names = [item.get('name', 'unknown') for item in data] if isinstance(data, list) else []
+                    print(f"   Available instances: {available_names}")
+
         except Exception as e:
-            print(f"Error fetching connection info for instance {self.name}: {e}")
-        
+            traceback.print_exc()
+            print(f"❌ Error fetching connection info for instance {self.name}: {e}")
+
         return False
 
 

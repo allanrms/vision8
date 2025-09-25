@@ -23,6 +23,37 @@ class EvolutionAPIService:
         self.base_url = settings.EVOLUTION_API_BASE_URL
         self.instance = instance
 
+    def check_whatsapp_numbers(self, numbers):
+        """Check if numbers have WhatsApp using Evolution API"""
+        url = f"{self.base_url}/chat/whatsappNumbers/{self.instance.instance_name}"
+
+        headers = {
+            "apikey": self.instance.api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Clean numbers and ensure they're in list format
+        if isinstance(numbers, str):
+            numbers = [numbers]
+
+        clean_numbers = [clean_number_whatsapp(num) for num in numbers]
+        payload = {"numbers": clean_numbers}
+
+        try:
+            print(f"🔍 Verificando números no WhatsApp: {clean_numbers}")
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+
+            if response.status_code == 200:
+                result = response.json()
+                print(f"✅ Verificação de números concluída: {result}")
+                return result
+            else:
+                print(f"⚠️ Erro na verificação de números: {response.status_code} - {response.text}")
+                return None
+
+        except requests.RequestException as e:
+            print(f"❌ Erro ao verificar números no WhatsApp: {e}")
+            return None
 
     def send_text_message(self, to_number, message):
         """Send text message using Evolution API"""
@@ -38,13 +69,11 @@ class EvolutionAPIService:
         
         payload = {
             "number": clean_number,
+            "text": message,
             "options": {
                 "delay": 1200,
                 "presence": "composing",
                 "linkPreview": False
-            },
-            "textMessage": {
-                "text": message
             }
         }
         
@@ -60,6 +89,22 @@ class EvolutionAPIService:
             print(f"   Status: {response.status_code}")
             if response.status_code != 200:
                 print(f"   Response body1: {response.text}")
+
+            # Verificar se houve erro específico do WhatsApp antes de raise_for_status
+            if response.status_code == 400:
+                try:
+                    error_data = response.json()
+                    if 'response' in error_data and 'message' in error_data['response']:
+                        messages = error_data['response']['message']
+                        if isinstance(messages, list) and len(messages) > 0:
+                            message_info = messages[0]
+                            if message_info.get('exists') is False:
+                                number = message_info.get('number', clean_number)
+                                print(f"⚠️ Número {number} não tem WhatsApp ou não existe")
+                                return {'error': 'number_not_exists', 'number': number, 'message': 'Número não tem WhatsApp'}
+                except:
+                    pass  # Se não conseguir parsear, continua com o fluxo normal
+
             response.raise_for_status()
             # print(f"✅ Mensagem enviada com sucesso: {response.text}")
 
@@ -69,6 +114,20 @@ class EvolutionAPIService:
             if hasattr(e, 'response') and e.response is not None:
                 print(f"   Response status: {e.response.status_code}")
                 print(f"   Response body2: {e.response.text}")
+
+                # Tentar extrair informação mais específica do erro
+                try:
+                    error_data = e.response.json()
+                    if e.response.status_code == 400 and 'response' in error_data and 'message' in error_data['response']:
+                        messages = error_data['response']['message']
+                        if isinstance(messages, list) and len(messages) > 0:
+                            message_info = messages[0]
+                            if message_info.get('exists') is False:
+                                number = message_info.get('number', clean_number)
+                                return {'error': 'number_not_exists', 'number': number, 'message': 'Número não tem WhatsApp'}
+                except:
+                    pass
+
             traceback.print_exc()
             return None
     

@@ -493,7 +493,7 @@
 
             <div class="categories-list">
                 <div class="chart-header">
-                    <div class="chart-title">Detalhes por Categoria</div>
+                    <div class="chart-title">Detalhes Despesas</div>
                 </div>
                 {% for cat in expenses_by_category %}
                 <div class="category-item">
@@ -508,6 +508,41 @@
                 </div>
                 {% empty %}
                 <p style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma despesa registrada</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="expenses-card">
+                <div class="expenses-header">
+                    <div class="chart-title">Receitas</div>
+                    <div class="expenses-tabs">
+                        <button class="tab-btn active">Recebidas</button>
+                        <button class="tab-btn">A Receber</button>
+                    </div>
+                </div>
+                <div class="donut-wrapper">
+                    <canvas id="incomePieChart"></canvas>
+                </div>
+            </div>
+
+            <div class="categories-list">
+                <div class="chart-header">
+                    <div class="chart-title">Detalhes Receitas</div>
+                </div>
+                {% for cat in income_by_category %}
+                <div class="category-item">
+                    <div class="category-info">
+                        <div class="category-color" style="background-color: {{ cat.color }}"></div>
+                        <div class="category-name">{{ cat.name }}</div>
+                    </div>
+                    <div class="category-value">
+                        <div class="category-amount">R$ {{ cat.total|floatformat:2|intcomma }}</div>
+                        <div class="category-percentage">{{ cat.percentage|floatformat:1 }}%</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma receita registrada</p>
                 {% endfor %}
             </div>
         </div>
@@ -577,6 +612,7 @@
 
         // Variáveis com valores numéricos (sem formatação brasileira)
         const totalExpenses = parseFloat("{{ total_expenses|default:0|stringformat:'f' }}".replace(',', '.'));
+        const totalIncome = parseFloat("{{ total_income|default:0|stringformat:'f' }}".replace(',', '.'));
 
         // Debug - verificar se os dados existem
         console.log('=== DADOS DOS GRÁFICOS ===');
@@ -774,6 +810,67 @@
                     ctx.font = '12px sans-serif';
                     ctx.fillStyle = '#94a3b8';
                     const subtitle = 'Total Pago';
+                    const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
+                    ctx.fillText(subtitle, subtitleX, textY + 25);
+
+                    ctx.save();
+                }
+            }]
+        });
+
+        // Income Donut Chart
+        const incomeCtx = document.getElementById('incomePieChart').getContext('2d');
+        const incomeChart = new Chart(incomeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ income_labels|safe }},
+                datasets: [{
+                    data: {{ income_values|safe }},
+                    backgroundColor: {{ income_colors|safe }},
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+
+                    ctx.restore();
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#10b981';
+
+                    const text = 'R$ ' + totalIncome.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2 - 10;
+
+                    ctx.fillText(text, textX, textY);
+
+                    ctx.font = '12px sans-serif';
+                    ctx.fillStyle = '#94a3b8';
+                    const subtitle = 'Total Recebido';
                     const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
                     ctx.fillText(subtitle, subtitleX, textY + 25);
 

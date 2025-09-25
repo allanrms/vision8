@@ -162,9 +162,12 @@ def dashboard(request):
         percentage = (exp['total'] / total_expenses * 100) if total_expenses > 0 else 0
         payment_methods_data.append({
             'name': exp['payment_method__name'],
-            'total': exp['total'],
+            'total': float(exp['total']),  # Converter para float para JSON
             'percentage': percentage
         })
+
+    # Serializar dados dos métodos de pagamento para JavaScript
+    payment_methods_json = json.dumps(payment_methods_data)
 
     # Obter todas as movimentações do período ordenadas por data
     all_movements = movements.select_related('category', 'payment_method').order_by('-date', '-created_at')
@@ -184,6 +187,7 @@ def dashboard(request):
         'expenses_by_category': expenses_by_category,
         'income_by_category': income_by_category,
         'payment_methods_data': payment_methods_data,
+        'payment_methods_json': payment_methods_json,
         'all_movements': paginated_movements,
         'bar_labels': bar_labels,
         'bar_income': bar_income,

@@ -30,7 +30,7 @@ from .models import Category, Movement, PaymentMethod
     Analise e insira na categoria que faça mais sentido.
 
     Para despesas, sempre especifique o método de pagamento (PIX, Dinheiro, Cartão, etc.).
-    Se não especificado, use PIX como padrão para despesas."""
+    Se não especificado, use "Não especificado" como padrão para despesas."""
 
 class FinanceAIAssistant(AIAssistant):
     id = "finance_assistant"
@@ -68,7 +68,7 @@ class FinanceAIAssistant(AIAssistant):
 
             if payment_methods.exists():
                 metodos_lista = "\n".join([f"  - {method.name}" for method in payment_methods])
-                base_instructions += f"\n\n**MÉTODOS DE PAGAMENTO DISPONÍVEIS:**\n{metodos_lista}\n\nIMPORTANTE: Para despesas, sempre especifique o método de pagamento usando EXATAMENTE um desses nomes. Se não especificado, use 'PIX' como padrão."
+                base_instructions += f"\n\n**MÉTODOS DE PAGAMENTO DISPONÍVEIS:**\n{metodos_lista}\n\nIMPORTANTE: Para despesas, sempre especifique o método de pagamento usando EXATAMENTE um desses nomes. Se não especificado, use 'Não especificado' como padrão."
 
         return base_instructions
 
@@ -255,8 +255,8 @@ class FinanceAIAssistant(AIAssistant):
             payment_method = None
             if tipo == 'expense':
                 if not metodo_pagamento:
-                    # Usar PIX como padrão se não especificado
-                    metodo_pagamento = "PIX"
+                    # Usar "Não especificado" como padrão se não informado
+                    metodo_pagamento = "Não especificado"
 
                 payment_method = PaymentMethod.objects.filter(
                     models.Q(user=user) | models.Q(user__isnull=True),

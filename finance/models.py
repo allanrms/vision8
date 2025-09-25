@@ -12,6 +12,7 @@ class PaymentMethod(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='Usuário', null=True)
     name = models.CharField('Nome', max_length=50)
     description = models.TextField('Descrição', blank=True)
+    icon = models.CharField('Ícone', max_length=50, default='💳', help_text='Emoji ou ícone para o método de pagamento')
     is_active = models.BooleanField('Ativo', default=True)
     is_default = models.BooleanField('Padrão', default=False)
     created_at = models.DateTimeField('Criado em', auto_now_add=True)

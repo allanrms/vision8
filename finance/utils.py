@@ -386,41 +386,55 @@ DEFAULT_CATEGORIES = [
 # Métodos de pagamento padrão
 DEFAULT_PAYMENT_METHODS = [
     {
-        "name": "PIX",
-        "description": "Pagamento via PIX",
+        "name": "Não especificado",
+        "description": "Método de pagamento não especificado",
+        "icon": "❓",
         "is_default": True
     },
     {
+        "name": "PIX",
+        "description": "Pagamento via PIX",
+        "icon": "📱"
+    },
+    {
         "name": "Dinheiro",
-        "description": "Pagamento em dinheiro"
+        "description": "Pagamento em dinheiro",
+        "icon": "💵"
     },
     {
         "name": "Cartão de Débito",
-        "description": "Pagamento com cartão de débito"
+        "description": "Pagamento com cartão de débito",
+        "icon": "💳"
     },
     {
         "name": "Cartão de Crédito",
-        "description": "Pagamento com cartão de crédito"
+        "description": "Pagamento com cartão de crédito",
+        "icon": "💎"
     },
     {
         "name": "Transferência Bancária",
-        "description": "Transferência entre contas bancárias"
+        "description": "Transferência entre contas bancárias",
+        "icon": "🏦"
     },
     {
         "name": "Boleto",
-        "description": "Pagamento via boleto bancário"
+        "description": "Pagamento via boleto bancário",
+        "icon": "🧾"
     },
     {
         "name": "Cheque",
-        "description": "Pagamento com cheque"
+        "description": "Pagamento com cheque",
+        "icon": "📝"
     },
     {
         "name": "Vale Alimentação",
-        "description": "Cartão ou vale alimentação"
+        "description": "Cartão ou vale alimentação",
+        "icon": "🍽️"
     },
     {
         "name": "Vale Refeição",
-        "description": "Cartão ou vale refeição"
+        "description": "Cartão ou vale refeição",
+        "icon": "🥗"
     }
 ]
 
@@ -492,6 +506,7 @@ def create_default_payment_methods(user):
             name=method_data['name'],
             defaults={
                 'description': method_data['description'],
+                'icon': method_data.get('icon', '💳'),
                 'is_default': method_data.get('is_default', False),
                 'is_active': True
             }

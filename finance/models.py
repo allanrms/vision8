@@ -5,6 +5,33 @@ from decimal import Decimal
 import uuid
 
 
+class PaymentMethod(models.Model):
+    """Métodos de pagamento para despesas"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='Usuário', null=True)
+    name = models.CharField('Nome', max_length=50)
+    description = models.TextField('Descrição', blank=True)
+    is_active = models.BooleanField('Ativo', default=True)
+    is_default = models.BooleanField('Padrão', default=False)
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Método de Pagamento'
+        verbose_name_plural = 'Métodos de Pagamento'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # Garantir que apenas um método seja padrão por usuário
+        if self.is_default:
+            PaymentMethod.objects.filter(user=self.user, is_default=True).exclude(id=self.id).update(is_default=False)
+        super().save(*args, **kwargs)
+
+
 class Category(models.Model):
     """Categorias para segmentação das movimentações"""
 
@@ -42,6 +69,9 @@ class Movement(models.Model):
     description = models.CharField('Descrição', max_length=200)
     date = models.DateField('Data')
     category = models.ForeignKey(Category, on_delete=models.PROTECT, verbose_name='Categoria')
+    payment_method = models.ForeignKey(PaymentMethod, on_delete=models.PROTECT, verbose_name='Método de Pagamento',
+                                     null=True, blank=True,
+                                     help_text='Método de pagamento (obrigatório para despesas)')
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
 

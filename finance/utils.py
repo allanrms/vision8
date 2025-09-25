@@ -383,12 +383,60 @@ DEFAULT_CATEGORIES = [
     },
 ]
 
+# Métodos de pagamento padrão
+DEFAULT_PAYMENT_METHODS = [
+    {
+        "name": "PIX",
+        "description": "Pagamento via PIX",
+        "is_default": True
+    },
+    {
+        "name": "Dinheiro",
+        "description": "Pagamento em dinheiro"
+    },
+    {
+        "name": "Cartão de Débito",
+        "description": "Pagamento com cartão de débito"
+    },
+    {
+        "name": "Cartão de Crédito",
+        "description": "Pagamento com cartão de crédito"
+    },
+    {
+        "name": "Transferência Bancária",
+        "description": "Transferência entre contas bancárias"
+    },
+    {
+        "name": "Boleto",
+        "description": "Pagamento via boleto bancário"
+    },
+    {
+        "name": "Cheque",
+        "description": "Pagamento com cheque"
+    },
+    {
+        "name": "Vale Alimentação",
+        "description": "Cartão ou vale alimentação"
+    },
+    {
+        "name": "Vale Refeição",
+        "description": "Cartão ou vale refeição"
+    }
+]
+
 
 def get_default_categories():
     """
     Retorna a lista de categorias padrão
     """
     return DEFAULT_CATEGORIES
+
+
+def get_default_payment_methods():
+    """
+    Retorna a lista de métodos de pagamento padrão
+    """
+    return DEFAULT_PAYMENT_METHODS
 
 
 def create_default_categories(user):
@@ -415,6 +463,37 @@ def create_default_categories(user):
             defaults={
                 'description': cat_data['description'],
                 'color': cat_data['color']
+            }
+        )
+
+        if created:
+            created_count += 1
+
+    return created_count
+
+
+def create_default_payment_methods(user):
+    """
+    Cria os métodos de pagamento padrão para um usuário
+
+    Args:
+        user: Usuário para associar os métodos de pagamento
+
+    Returns:
+        int: Número de métodos de pagamento criados
+    """
+    from finance.models import PaymentMethod
+
+    created_count = 0
+
+    for method_data in DEFAULT_PAYMENT_METHODS:
+        payment_method, created = PaymentMethod.objects.get_or_create(
+            user=user,
+            name=method_data['name'],
+            defaults={
+                'description': method_data['description'],
+                'is_default': method_data.get('is_default', False),
+                'is_active': True
             }
         )
 

@@ -734,6 +734,42 @@
             </div>
         </div>
 
+        {% if payment_methods_data %}
+        <div class="bottom-grid" style="margin-top: 1.5rem;">
+            <div class="expenses-card">
+                <div class="expenses-header">
+                    <div class="chart-title">Métodos de Pagamento</div>
+                    <div class="expenses-tabs">
+                        <button class="tab-btn active">Despesas</button>
+                    </div>
+                </div>
+                <div class="donut-wrapper">
+                    <canvas id="paymentMethodsPieChart"></canvas>
+                </div>
+            </div>
+
+            <div class="categories-list">
+                <div class="chart-header">
+                    <div class="chart-title">Detalhes por Método</div>
+                </div>
+                {% for method in payment_methods_data %}
+                <div class="category-item">
+                    <div class="category-info">
+                        <div class="category-color" style="background-color: #667eea"></div>
+                        <div class="category-name">{{ method.name }}</div>
+                    </div>
+                    <div class="category-value">
+                        <div class="category-amount">R$ {{ method.total|floatformat:2|intcomma }}</div>
+                        <div class="category-percentage">{{ method.percentage|floatformat:1 }}%</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma despesa com método registrado</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="movement-chart">
             <div class="chart-header">
                 <div class="chart-title">Movimentação Diária (Entradas e Saídas)</div>
@@ -755,6 +791,7 @@
                             <th>Data</th>
                             <th>Descrição</th>
                             <th>Categoria</th>
+                            <th>Método</th>
                             <th>Tipo</th>
                             <th>Valor</th>
                         </tr>
@@ -773,6 +810,13 @@
                                     <div class="transaction-category-color" style="background-color: {{ movement.category.color }}"></div>
                                     <span class="transaction-category-name">{{ movement.category.name }}</span>
                                 </div>
+                            </td>
+                            <td>
+                                {% if movement.payment_method %}
+                                    <span class="transaction-category-name">{{ movement.payment_method.name }}</span>
+                                {% else %}
+                                    <span style="color: #94a3b8;">-</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <span class="transaction-type {{ movement.type }}">
@@ -1256,6 +1300,78 @@
                 }
             }
         });
+
+        // Payment Methods Donut Chart
+        {% if payment_methods_data %}
+        const paymentMethodsCtx = document.getElementById('paymentMethodsPieChart').getContext('2d');
+        const paymentMethodsData = {{ payment_methods_data|safe }};
+        const paymentMethodsLabels = paymentMethodsData.map(item => item.name);
+        const paymentMethodsValues = paymentMethodsData.map(item => parseFloat(item.total));
+        const paymentMethodsColors = [
+            '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe',
+            '#43e97b', '#fa709a', '#ffecd2', '#a8edea', '#d299c2'
+        ];
+
+        const paymentMethodsChart = new Chart(paymentMethodsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: paymentMethodsLabels,
+                datasets: [{
+                    data: paymentMethodsValues,
+                    backgroundColor: paymentMethodsColors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+                    const total = paymentMethodsValues.reduce((a, b) => a + b, 0);
+
+                    ctx.restore();
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#1e293b';
+
+                    const text = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2 - 10;
+
+                    ctx.fillText(text, textX, textY);
+
+                    ctx.font = '12px sans-serif';
+                    ctx.fillStyle = '#94a3b8';
+                    const subtitle = 'Total por Método';
+                    const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
+                    ctx.fillText(subtitle, subtitleX, textY + 25);
+
+                    ctx.save();
+                }
+            }]
+        });
+        {% endif %}
 
         // Scroll suave para a tabela após mudança de página
         document.addEventListener('DOMContentLoaded', function() {

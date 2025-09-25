@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from decimal import Decimal
 from django.db.models import Sum, Q
 from django.core.paginator import Paginator
-from .models import Movement, Category
+from .models import Movement, Category, PaymentMethod
 from authentication.decorators import finance_required
 import json
 import calendar
@@ -149,8 +149,25 @@ def dashboard(request):
     # Calcular número de dias do período
     period_days = (end_date - start_date).days + 1
 
+    # Análise de despesas por método de pagamento
+    expenses_by_payment_method = movements.filter(
+        type='expense',
+        payment_method__isnull=False
+    ).values(
+        'payment_method__name'
+    ).annotate(total=Sum('amount')).order_by('-total')
+
+    payment_methods_data = []
+    for exp in expenses_by_payment_method:
+        percentage = (exp['total'] / total_expenses * 100) if total_expenses > 0 else 0
+        payment_methods_data.append({
+            'name': exp['payment_method__name'],
+            'total': exp['total'],
+            'percentage': percentage
+        })
+
     # Obter todas as movimentações do período ordenadas por data
-    all_movements = movements.select_related('category').order_by('-date', '-created_at')
+    all_movements = movements.select_related('category', 'payment_method').order_by('-date', '-created_at')
 
     # Paginação
     page = request.GET.get('page', 1)
@@ -166,6 +183,7 @@ def dashboard(request):
         'balance': balance,
         'expenses_by_category': expenses_by_category,
         'income_by_category': income_by_category,
+        'payment_methods_data': payment_methods_data,
         'all_movements': paginated_movements,
         'bar_labels': bar_labels,
         'bar_income': bar_income,

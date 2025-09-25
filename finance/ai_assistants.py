@@ -1,12 +1,13 @@
 from django.utils import timezone
 from django.conf import settings
+from django.db import models
 from django_ai_assistant import AIAssistant, method_tool
 from datetime import datetime, timedelta
 from decimal import Decimal
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-from .models import Category, Movement
+from .models import Category, Movement, PaymentMethod
 
 """Você é um assistente inteligente especializado em gestão financeira.
 
@@ -16,6 +17,7 @@ from .models import Category, Movement
     - Verificar saldo por categoria
     - Criar e gerenciar categorias
     - Analisar gastos por período
+    - Gerenciar métodos de pagamento para despesas
 
     Sempre seja útil, preciso e forneça informações claras sobre as finanças.
     Use as ferramentas disponíveis para registrar e consultar movimentações financeiras.
@@ -25,7 +27,10 @@ from .models import Category, Movement
 
     Para valores monetários, sempre use o formato brasileiro (R$ 100,50).
     Ao registrar uma movimentação, não é necessário pedir confirmação, apenas registre.
-    Analise e insira na categoria que faça mais sentido."""
+    Analise e insira na categoria que faça mais sentido.
+
+    Para despesas, sempre especifique o método de pagamento (PIX, Dinheiro, Cartão, etc.).
+    Se não especificado, use PIX como padrão para despesas."""
 
 class FinanceAIAssistant(AIAssistant):
     id = "finance_assistant"
@@ -54,6 +59,16 @@ class FinanceAIAssistant(AIAssistant):
             if categories.exists():
                 categorias_lista = "\n".join([f"  - {cat.name}" for cat in categories])
                 base_instructions += f"\n\n**CATEGORIAS DISPONÍVEIS DO USUÁRIO:**\n{categorias_lista}\n\nIMPORTANTE: Use EXATAMENTE um desses nomes de categoria ao registrar movimentações. Escolha a categoria que melhor se encaixa na descrição da movimentação."
+
+            # Adicionar lista de métodos de pagamento disponíveis
+            payment_methods = PaymentMethod.objects.filter(
+                models.Q(user=self._user) | models.Q(user__isnull=True),
+                is_active=True
+            ).order_by('name')
+
+            if payment_methods.exists():
+                metodos_lista = "\n".join([f"  - {method.name}" for method in payment_methods])
+                base_instructions += f"\n\n**MÉTODOS DE PAGAMENTO DISPONÍVEIS:**\n{metodos_lista}\n\nIMPORTANTE: Para despesas, sempre especifique o método de pagamento usando EXATAMENTE um desses nomes. Se não especificado, use 'PIX' como padrão."
 
         return base_instructions
 
@@ -162,6 +177,10 @@ class FinanceAIAssistant(AIAssistant):
                 movimento_info += f"   📅 {data_formatada}\n"
                 movimento_info += f"   🏷️ {movement.category.name}"
 
+                # Adicionar método de pagamento se for despesa
+                if movement.type == 'expense' and movement.payment_method:
+                    movimento_info += f"\n   💳 {movement.payment_method.name}"
+
                 movimentacoes_formatadas.append(movimento_info)
 
             resultado = "\n\n".join(movimentacoes_formatadas)
@@ -184,7 +203,8 @@ class FinanceAIAssistant(AIAssistant):
         valor: float,
         descricao: str,
         categoria: str,
-        data: str = ""
+        data: str = "",
+        metodo_pagamento: str = ""
     ) -> str:
         """Registra uma nova movimentação financeira
 
@@ -194,6 +214,7 @@ class FinanceAIAssistant(AIAssistant):
             descricao: Descrição da movimentação
             categoria: Nome da categoria
             data: Data no formato DD/MM/YYYY (opcional, usa data atual se vazio)
+            metodo_pagamento: Método de pagamento (obrigatório para despesas, opcional para receitas)
 
         Returns:
             String com confirmação de registro ou mensagem de erro
@@ -230,13 +251,36 @@ class FinanceAIAssistant(AIAssistant):
                 categories_list = "\n".join([f"  - {cat}" for cat in available_categories])
                 return f"❌ Categoria '{categoria}' não encontrada. Use EXATAMENTE um dos nomes disponíveis:\n\n{categories_list}"
 
+            # Processar método de pagamento para despesas
+            payment_method = None
+            if tipo == 'expense':
+                if not metodo_pagamento:
+                    # Usar PIX como padrão se não especificado
+                    metodo_pagamento = "PIX"
+
+                payment_method = PaymentMethod.objects.filter(
+                    models.Q(user=user) | models.Q(user__isnull=True),
+                    name__iexact=metodo_pagamento,
+                    is_active=True
+                ).first()
+
+                if not payment_method:
+                    available_methods = PaymentMethod.objects.filter(
+                        models.Q(user=user) | models.Q(user__isnull=True),
+                        is_active=True
+                    ).values_list('name', flat=True)
+
+                    methods_list = "\n".join([f"  - {method}" for method in available_methods])
+                    return f"❌ Método de pagamento '{metodo_pagamento}' não encontrado. Use EXATAMENTE um dos nomes disponíveis:\n\n{methods_list}"
+
             Movement.objects.create(
                 user=user,
                 type=tipo,
                 amount=valor_decimal,
                 description=descricao,
                 date=data_obj,
-                category=category
+                category=category,
+                payment_method=payment_method
             )
 
             tipo_display = "Receita" if tipo == 'income' else "Despesa"
@@ -250,6 +294,10 @@ class FinanceAIAssistant(AIAssistant):
 {cor} *Valor:* {sinal}R$ {valor:.2f}
 📅 *Data:* {data_obj.strftime('%d/%m/%Y')}
 🏷️ *Categoria:* {category.name}"""
+
+            # Adicionar método de pagamento se for despesa
+            if payment_method:
+                resposta += f"\n💳 *Método de Pagamento:* {payment_method.name}"
 
             return resposta
 

@@ -532,7 +532,7 @@ Se quiser acompanhar suas finanças de forma visual, você também pode acessar 
         Retorna tupla: (usuário, foi_criado, senha_ou_none)
         """
         from django.contrib.auth import get_user_model
-        from finance.utils import create_default_categories
+        from finance.utils import create_default_categories, create_default_payment_methods
         import secrets
         import string
 
@@ -561,9 +561,13 @@ Se quiser acompanhar suas finanças de forma visual, você também pode acessar 
             # Criar categorias padrão para o novo usuário
             categories_count = create_default_categories(user)
 
+            # Criar métodos de pagamento padrão para o novo usuário
+            payment_methods_count = create_default_payment_methods(user)
+
             print(f"✅ Usuário criado automaticamente: {username} ({email})")
             print(f"🔐 Senha gerada: {password}")
             print(f"📂 {categories_count} categorias padrão criadas")
+            print(f"💳 {payment_methods_count} métodos de pagamento padrão criados")
         else:
             print(f"ℹ️ Usuário já existe: {username}")
 

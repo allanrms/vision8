@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum
-from .models import Category, Movement
+from django.db import models
+from .models import Category, Movement, PaymentMethod
 
 
 @admin.register(Category)
@@ -31,10 +32,31 @@ class CategoryAdmin(admin.ModelAdmin):
     color_display.short_description = 'Cor'
 
 
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'description', 'is_default', 'is_active', 'created_at']
+    list_filter = ['is_default', 'is_active', 'created_at', 'user']
+    search_fields = ['name', 'description', 'user__username']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    list_editable = ['user', 'is_default', 'is_active']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # Mostra métodos do usuário + métodos globais (user=None)
+        return qs.filter(models.Q(user=request.user) | models.Q(user__isnull=True))
+
+    def save_model(self, request, obj, form, change):
+        if not change and not request.user.is_superuser:
+            obj.user = request.user
+        super().save_model(request, obj, form, change)
+
+
 @admin.register(Movement)
 class MovementAdmin(admin.ModelAdmin):
-    list_display = ['description', 'user', 'type_display', 'amount_display', 'category', 'date']
-    list_filter = ['type', 'category', 'date', 'user']
+    list_display = ['description', 'user', 'type_display', 'amount_display', 'category', 'payment_method', 'date']
+    list_filter = ['type', 'category', 'payment_method', 'date', 'user']
     search_fields = ['description', 'user__username']
     readonly_fields = ['id', 'created_at', 'updated_at']
     date_hierarchy = 'date'
@@ -45,7 +67,7 @@ class MovementAdmin(admin.ModelAdmin):
             'fields': ('type', 'amount', 'description', 'date')
         }),
         ('Categorização', {
-            'fields': ('category',)
+            'fields': ('category', 'payment_method')
         }),
         ('Metadados', {
             'fields': ('id', 'created_at', 'updated_at'),
@@ -68,6 +90,12 @@ class MovementAdmin(admin.ModelAdmin):
         if db_field.name == "category":
             if not request.user.is_superuser:
                 kwargs["queryset"] = Category.objects.filter(user=request.user)
+        elif db_field.name == "payment_method":
+            if not request.user.is_superuser:
+                kwargs["queryset"] = PaymentMethod.objects.filter(
+                    models.Q(user=request.user) | models.Q(user__isnull=True),
+                    is_active=True
+                )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def type_display(self, obj):
